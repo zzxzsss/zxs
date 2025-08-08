@@ -1,1 +1,1181 @@
-404: Not Found
+local Players = game:GetService("Players")
+repeat task.wait() until game:IsLoaded() and Players.LocalPlayer and Players.LocalPlayer.Character
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+
+-- Create Fluent window
+local Window = Fluent:CreateWindow({
+    Title = "Shrink Hide & Seek by Viper",
+    SubTitle = "Hub",
+    TabWidth = 110,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Darker",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Create tabs
+local HomeTab = Window:AddTab({ Title = "Home", Icon = "home" })
+local PlayerTab = Window:AddTab({ Title = "PlayerMisc", Icon = "user" })
+local FeatureTab = Window:AddTab({ Title = "Feature", Icon = "cog" })
+local AdminTab = Window:AddTab({ Title = "Admin", Icon = "shield" })
+local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
+
+-- Notification function with improved error handling
+local function createNotification(title, message, duration)
+    duration = duration or 3
+    
+    local success, err = pcall(function()
+        if not playerGui or not playerGui.Parent then
+            return
+        end
+
+        local notifGui = Instance.new("ScreenGui")
+        notifGui.Name = "ViperNotification"
+        notifGui.Parent = playerGui
+        notifGui.ResetOnSpawn = false
+
+        local notifFrame = Instance.new("Frame")
+        notifFrame.Size = UDim2.new(0, 300, 0, 80)
+        notifFrame.Position = UDim2.new(1, 0, 0, 20)
+        notifFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        notifFrame.BorderSizePixel = 0
+        notifFrame.Parent = notifGui
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = notifFrame
+
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Size = UDim2.new(1, -10, 0, 30)
+        titleLabel.Position = UDim2.new(0, 5, 0, 5)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = title
+        titleLabel.TextColor3 = Color3.fromRGB(0, 255, 127)
+        titleLabel.TextScaled = true
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabel.Parent = notifFrame
+
+        local messageLabel = Instance.new("TextLabel")
+        messageLabel.Size = UDim2.new(1, -10, 0, 40)
+        messageLabel.Position = UDim2.new(0, 5, 0, 35)
+        messageLabel.BackgroundTransparency = 1
+        messageLabel.Text = message
+        messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        messageLabel.TextScaled = true
+        messageLabel.Font = Enum.Font.Gotham
+        messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+        messageLabel.Parent = notifFrame
+
+        -- Slide in animation
+        local slideIn = TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+            Position = UDim2.new(1, -320, 0, 20)
+        })
+        slideIn:Play()
+
+        -- Auto remove after duration
+        task.spawn(function()
+            task.wait(duration)
+            if notifGui and notifGui.Parent then
+                local slideOut = TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+                    Position = UDim2.new(1, 0, 0, 20)
+                })
+                slideOut:Play()
+                slideOut.Completed:Connect(function()
+                    if notifGui and notifGui.Parent then
+                        notifGui:Destroy()
+                    end
+                end)
+            end
+        end)
+    end)
+
+    if not success then
+        warn("Notification error: " .. tostring(err))
+    end
+end
+
+-- PLAYER TAB VARIABLES
+local speedEnabled = false
+local speedValue = 16
+local jumpEnabled = false
+local jumpValue = 50
+local noclipEnabled = false
+local infiniteJumpEnabled = false
+local noclipConnection
+local infiniteJumpConnection
+
+-- AIMBOT & ESP VARIABLES
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local aimbotEnabled = false
+local autoAimEnabled = false
+local espLinesEnabled = false
+local espBoxesEnabled = false
+local locked = false
+
+-- ESP Storage
+local espLines = {}
+local espBoxes = {}
+
+-- Helper: Get Closest Player
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= LocalPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+            local success, result = pcall(function()
+                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
+                if onScreen then
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = targetPlayer
+                    end
+                end
+            end)
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Aimbot Keybind (Q)
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Q then
+        locked = not locked
+    end
+end)
+
+-- AutoAim Loop with error handling
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if aimbotEnabled and locked then
+            local target = GetClosestPlayer()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+            end
+        end
+
+        if autoAimEnabled then
+            local target = GetClosestPlayer()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+            end
+        end
+    end)
+end)
+
+-- ESP Line Creator
+local function createESPLine(targetPlayer)
+    local success, err = pcall(function()
+        local line = Drawing.new("Line")
+        line.Color = Color3.new(1, 1, 1)
+        line.Thickness = 1.5
+        line.Transparency = 1
+        line.Visible = true
+        espLines[targetPlayer] = line
+    end)
+    if not success then
+        warn("Failed to create ESP line: " .. tostring(err))
+    end
+end
+
+-- ESP Box Creator
+local function createESPBox(targetPlayer)
+    local success, err = pcall(function()
+        local box = Drawing.new("Square")
+        box.Color = Color3.new(0, 1, 0)
+        box.Thickness = 1.5
+        box.Transparency = 1
+        box.Filled = false
+        box.Visible = true
+        espBoxes[targetPlayer] = box
+    end)
+    if not success then
+        warn("Failed to create ESP box: " .. tostring(err))
+    end
+end
+
+-- ESP Update Loop with error handling
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer ~= LocalPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+                local pos, visible = Camera:WorldToViewportPoint(targetPlayer.Character.Head.Position)
+                
+                -- Update ESP Lines
+                if espLines[targetPlayer] and espLinesEnabled then
+                    espLines[targetPlayer].Visible = visible
+                    if visible then
+                        espLines[targetPlayer].From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+                        espLines[targetPlayer].To = Vector2.new(pos.X, pos.Y)
+                    end
+                elseif espLines[targetPlayer] then
+                    espLines[targetPlayer].Visible = false
+                end
+
+                -- Update ESP Boxes
+                if espBoxes[targetPlayer] and espBoxesEnabled and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local rootPos, onScreen = Camera:WorldToViewportPoint(targetPlayer.Character.HumanoidRootPart.Position)
+                    espBoxes[targetPlayer].Visible = onScreen
+                    if onScreen then
+                        espBoxes[targetPlayer].Size = Vector2.new(60, 100)
+                        espBoxes[targetPlayer].Position = Vector2.new(rootPos.X - 30, rootPos.Y - 50)
+                    end
+                elseif espBoxes[targetPlayer] then
+                    espBoxes[targetPlayer].Visible = false
+                end
+            end
+        end
+    end)
+end)
+
+-- Noclip function with improved error handling
+local function setNoclip(state)
+    if not player.Character then return end
+
+    local success, err = pcall(function()
+        if state then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+
+            if noclipConnection then
+                noclipConnection:Disconnect()
+            end
+            noclipConnection = RunService.Stepped:Connect(function()
+                pcall(function()
+                    if player.Character then
+                        for _, part in pairs(player.Character:GetChildren()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            end)
+        else
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+
+            if player.Character then
+                for _, part in pairs(player.Character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end)
+
+    if not success then
+        warn("Noclip error: " .. tostring(err))
+    end
+end
+
+-- Infinite Jump function
+local function setInfiniteJump(state)
+    local success, err = pcall(function()
+        if state then
+            if infiniteJumpConnection then
+                infiniteJumpConnection:Disconnect()
+            end
+            infiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
+                pcall(function()
+                    if player.Character then
+                        local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
+                        if humanoid then
+                            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        end
+                    end
+                end)
+            end)
+        else
+            if infiniteJumpConnection then
+                infiniteJumpConnection:Disconnect()
+                infiniteJumpConnection = nil
+            end
+        end
+    end)
+
+    if not success then
+        warn("Infinite jump error: " .. tostring(err))
+    end
+end
+
+-- EndGame function with improved error handling
+local function executeEndGame(sectionName)
+    task.spawn(function()
+        local success, err = pcall(function()
+            -- Count players before executing
+            local flingedCount = 0
+            for _, targetPlayer in pairs(Players:GetPlayers()) do
+                if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    flingedCount = flingedCount + 1
+                end
+            end
+            
+            -- Load and execute the external fling script
+            local scriptContent = game:HttpGet("https://rawscripts.net/raw/Universal-Script-Fling-All-Script-20486")
+            if scriptContent and scriptContent ~= "" then
+                local compiledScript = loadstring(scriptContent)
+                if compiledScript then
+                    compiledScript()
+                    createNotification("EndGame - " .. sectionName, "Flinged " .. flingedCount .. " players", 3)
+                else
+                    error("Failed to compile fling script")
+                end
+            else
+                error("Empty or invalid script content")
+            end
+        end)
+        if not success then
+            warn("EndGame error: " .. tostring(err))
+            createNotification("Error", "Failed to execute fling script", 3)
+        end
+    end)
+end
+
+-- HOME TAB
+HomeTab:AddParagraph({
+    Title = "Viper Supported Games",
+    Content = "Something Evil Will Happen\nTower of Hell\nSlapBattle\nTroll Tower 2\nJoin my Discord Server for Scripts!"
+})
+
+HomeTab:AddButton({
+    Title = "Copy Discord Invite",
+    Description = "Click to copy Discord link",
+    Callback = function()
+        local success, err = pcall(function()
+            if setclipboard then
+                setclipboard("https://discord.gg/fGDfD7Rv")
+                createNotification("Copied!", "Discord link copied to clipboard", 3)
+            else
+                createNotification("Error", "Clipboard not supported", 3)
+            end
+        end)
+        if not success then
+            warn("Clipboard error: " .. tostring(err))
+        end
+    end
+})
+
+-- PLAYER TAB
+PlayerTab:AddInput("SpeedInput", {
+    Title = "Speed Value",
+    Default = "16",
+    Placeholder = "Enter Speed 1000 max",
+    Numeric = true,
+    Finished = false,
+    Callback = function(value)
+        local success, err = pcall(function()
+            local num = tonumber(value)
+            if num and num > 0 and num <= 1000 then
+                speedValue = num
+                if speedEnabled and player.Character then
+                    local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+                    if hum then
+                        hum.WalkSpeed = speedValue
+                    end
+                end
+            end
+        end)
+        if not success then
+            warn("Speed input error: " .. tostring(err))
+        end
+    end
+})
+
+PlayerTab:AddToggle("SpeedToggle", {
+    Title = "Enable Speed Boost",
+    Default = false,
+    Callback = function(state)
+        local success, err = pcall(function()
+            speedEnabled = state
+            if player.Character then
+                local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+                if hum then
+                    hum.WalkSpeed = state and speedValue or 16
+                end
+            end
+        end)
+        if not success then
+            warn("Speed toggle error: " .. tostring(err))
+        end
+    end
+})
+
+PlayerTab:AddInput("JumpInput", {
+    Title = "Jump Value",
+    Default = "50",
+    Placeholder = "Enter Jump 500 max",
+    Numeric = true,
+    Finished = false,
+    Callback = function(value)
+        local success, err = pcall(function()
+            local num = tonumber(value)
+            if num and num > 0 and num <= 500 then
+                jumpValue = num
+                if jumpEnabled and player.Character then
+                    local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+                    if hum then
+                        if hum.JumpHeight then
+                            hum.JumpHeight = jumpValue
+                        else
+                            hum.JumpPower = jumpValue
+                        end
+                    end
+                end
+            end
+        end)
+        if not success then
+            warn("Jump input error: " .. tostring(err))
+        end
+    end
+})
+
+PlayerTab:AddToggle("JumpToggle", {
+    Title = "Jump Boost",
+    Default = false,
+    Callback = function(state)
+        local success, err = pcall(function()
+            jumpEnabled = state
+            if player.Character then
+                local hum = player.Character:FindFirstChildWhichIsA("Humanoid")
+                if hum then
+                    if hum.JumpHeight then
+                        hum.JumpHeight = state and jumpValue or 7.2
+                    else
+                        hum.JumpPower = state and jumpValue or 50
+                    end
+                end
+            end
+        end)
+        if not success then
+            warn("Jump toggle error: " .. tostring(err))
+        end
+    end
+})
+
+PlayerTab:AddToggle("InfiniteJumpToggle", {
+    Title = "Infinite Jump",
+    Description = "Only works if your jumppower is 20 then spam jump button",
+    Default = false,
+    Callback = function(state)
+        infiniteJumpEnabled = state
+        setInfiniteJump(state)
+        createNotification("Infinite Jump", state and "On" or "Off", 2)
+    end
+})
+
+PlayerTab:AddButton({
+    Title = "Invisible",
+    Description = "DONT PRESS SHRINK BUTTON WHILE YOUR INVISIBLE!",
+    Callback = function()
+        task.spawn(function()
+            local success, err = pcall(function()
+                local scriptContent = game:HttpGet('https://pastebin.com/raw/3Rnd9rHf')
+                if scriptContent and scriptContent ~= "" then
+                    local compiledScript = loadstring(scriptContent)
+                    if compiledScript then
+                        compiledScript()
+                        createNotification("Viper", "Invisible Script loaded", 3)
+                    else
+                        error("Failed to compile invisible script")
+                    end
+                else
+                    error("Empty or invalid script content")
+                end
+            end)
+            if not success then
+                warn("Invisible script error: " .. tostring(err))
+                createNotification("Error", "Failed to load invisible script", 3)
+            end
+        end)
+    end
+})
+
+PlayerTab:AddToggle("NoclipToggle", {
+    Title = "Noclip",
+    Default = false,
+    Callback = function(state)
+        noclipEnabled = state
+        setNoclip(state)
+        createNotification("Noclip", state and "On" or "Off", 2)
+    end
+})
+
+-- SEEKER SECTION
+PlayerTab:AddSection("Seeker")
+
+PlayerTab:AddButton({
+    Title = "Be Seeker",
+    Description = "Become Kobe",
+    Callback = function()
+        local success, err = pcall(function()
+            if player.Character then
+                local humanoid = player.Character:FindFirstChildWhichIsA("Humanoid")
+                if humanoid then
+                    humanoid.Health = 0
+                    createNotification("Viper", "You Successfully Turn Kobe", 3)
+                else
+                    createNotification("Error", "No humanoid found", 3)
+                end
+            else
+                createNotification("Error", "No character found", 3)
+            end
+        end)
+        if not success then
+            warn("Be Seeker error: " .. tostring(err))
+            createNotification("Error", "Failed to eliminate character", 3)
+        end
+    end
+})
+
+PlayerTab:AddButton({
+    Title = "EndGame",
+    Description = "Fling all players",
+    Callback = function()
+        executeEndGame("Seeker")
+    end
+})
+
+PlayerTab:AddToggle("AutoAimToggle", {
+    Title = "AutoAimLock",
+    Description = "Swipe through left or right or swipe up or down to cancel locking",
+    Default = false,
+    Callback = function(state)
+        autoAimEnabled = state
+        createNotification("AutoAim", state and "On" or "Off", 2)
+    end
+})
+
+PlayerTab:AddToggle("ESPLinesToggle", {
+    Title = "EspLinePlayers",
+    Description = "Works fine",
+    Default = false,
+    Callback = function(state)
+        espLinesEnabled = state
+        if state then
+            for _, targetPlayer in pairs(Players:GetPlayers()) do
+                if targetPlayer ~= LocalPlayer and not espLines[targetPlayer] then
+                    createESPLine(targetPlayer)
+                end
+            end
+            createNotification("ESP Lines", "On", 2)
+        else
+            for _, line in pairs(espLines) do
+                if line then
+                    line.Visible = false
+                end
+            end
+            createNotification("ESP Lines", "Off", 2)
+        end
+    end
+})
+
+PlayerTab:AddToggle("ESPBoxesToggle", {
+    Title = "EspBoxPlayers",
+    Description = "Combo AutoAimLock + EspBox",
+    Default = false,
+    Callback = function(state)
+        espBoxesEnabled = state
+        if state then
+            for _, targetPlayer in pairs(Players:GetPlayers()) do
+                if targetPlayer ~= LocalPlayer and not espBoxes[targetPlayer] then
+                    createESPBox(targetPlayer)
+                end
+            end
+            createNotification("ESP Boxes", "On", 2)
+        else
+            for _, box in pairs(espBoxes) do
+                if box then
+                    box.Visible = false
+                end
+            end
+            createNotification("ESP Boxes", "Off", 2)
+        end
+    end
+})
+
+-- HIDER SECTION
+PlayerTab:AddSection("Hider")
+
+PlayerTab:AddButton({
+    Title = "EndGame",
+    Description = "Fling all players",
+    Callback = function()
+        executeEndGame("Hider")
+    end
+})
+
+-- AutoWin Platform Variables
+local autoWinEnabled = false
+local autoWinPlatform = nil
+local autoWinConnection = nil
+local walkDirection = 1
+local walkRadius = 20
+local walkSpeed = 2
+
+PlayerTab:AddButton({
+    Title = "AutoWin",
+    Callback = function()
+        local success, err = pcall(function()
+            if autoWinPlatform and autoWinPlatform.Parent then
+                autoWinPlatform:Destroy()
+            end
+
+            autoWinPlatform = Instance.new("Part")
+            autoWinPlatform.Name = "AutoWinPlatform"
+            autoWinPlatform.Size = Vector3.new(1000, 1, 1000)
+            autoWinPlatform.Anchored = true
+            autoWinPlatform.CanCollide = true
+            autoWinPlatform.Transparency = 0.3
+            autoWinPlatform.Material = Enum.Material.SmoothPlastic
+            autoWinPlatform.BrickColor = BrickColor.new("Bright green")
+            autoWinPlatform.Position = Vector3.new(0, -200, 0)
+            autoWinPlatform.Parent = workspace
+            
+            -- TP player to platform
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local targetPosition = autoWinPlatform.Position + Vector3.new(0, 10, 0)
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
+                player.Character.HumanoidRootPart.Anchored = true
+                task.wait(0.1)
+                player.Character.HumanoidRootPart.Anchored = false
+            end
+            
+            createNotification("AutoWin", "Green platform created and teleported", 3)
+        end)
+        if not success then
+            warn("AutoWin Platform error: " .. tostring(err))
+            createNotification("Error", "Failed to create platform", 3)
+        end
+    end
+})
+
+-- Function to clean up AutoWin resources
+local function cleanupAutoWin()
+    if autoWinConnection then
+        autoWinConnection:Disconnect()
+        autoWinConnection = nil
+    end
+    if autoWinPlatform and autoWinPlatform.Parent then
+        autoWinPlatform:Destroy()
+        autoWinPlatform = nil
+    end
+end
+
+-- Function to perform circular walking
+local function startCircularWalk()
+    local angle = 0
+    local center = autoWinPlatform.Position + Vector3.new(0, 10, 0)
+    
+    if autoWinConnection then
+        autoWinConnection:Disconnect()
+    end
+    
+    autoWinConnection = RunService.Heartbeat:Connect(function()
+        pcall(function()
+            if not autoWinEnabled or not autoWinPlatform or not autoWinPlatform.Parent then
+                return
+            end
+            
+            if not player.Character then
+                return
+            end
+            
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and rootPart then
+                angle = angle + (walkSpeed * walkDirection * 0.05)
+                local newPos = center + Vector3.new(
+                    math.cos(angle) * walkRadius,
+                    0,
+                    math.sin(angle) * walkRadius
+                )
+                
+                rootPart.CFrame = CFrame.new(newPos, center)
+                humanoid:Move(Vector3.new(walkDirection, 0, 0))
+            end
+        end)
+    end)
+end
+
+PlayerTab:AddToggle("AutoWinFarmToggle", {
+    Title = "AutoWinFarm",
+    Description = "Teleports you under the map then starts walking in circles",
+    Default = false,
+    Callback = function(state)
+        local success, err = pcall(function()
+            autoWinEnabled = state
+            
+            if state then
+                if not autoWinPlatform or not autoWinPlatform.Parent then
+                    autoWinPlatform = Instance.new("Part")
+                    autoWinPlatform.Name = "AutoWinPlatform"
+                    autoWinPlatform.Size = Vector3.new(1000, 1, 1000)
+                    autoWinPlatform.Anchored = true
+                    autoWinPlatform.CanCollide = true
+                    autoWinPlatform.Transparency = 0.3
+                    autoWinPlatform.Material = Enum.Material.SmoothPlastic
+                    autoWinPlatform.BrickColor = BrickColor.new("Bright green")
+                    autoWinPlatform.Position = Vector3.new(0, -200, 0)
+                    autoWinPlatform.Parent = workspace
+                end
+
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetPosition = autoWinPlatform.Position + Vector3.new(0, 10, 0)
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
+                    player.Character.HumanoidRootPart.Anchored = true
+                    task.wait(0.1)
+                    player.Character.HumanoidRootPart.Anchored = false
+                end
+
+                startCircularWalk()
+                createNotification("AutoWin", "On - Will persist through death", 3)
+            else
+                cleanupAutoWin()
+                createNotification("AutoWin", "Off", 3)
+            end
+        end)
+        if not success then
+            warn("AutoWin Toggle error: " .. tostring(err))
+            createNotification("Error", "Failed to toggle AutoWin", 3)
+        end
+    end
+})
+
+-- FEATURE TAB
+FeatureTab:AddButton({
+    Title = "Tp to Lobby",
+    Description = "Teleport to the lobby",
+    Callback = function()
+        local success, err = pcall(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local lobbySpawn = workspace:FindFirstChild("Lobby")
+                if lobbySpawn then
+                    local spawnLocation = lobbySpawn:FindFirstChild("SpawnLocation")
+                    if spawnLocation then
+                        player.Character.HumanoidRootPart.CFrame = spawnLocation.CFrame + Vector3.new(0, 5, 0)
+                        createNotification("Teleport", "Teleported to Lobby", 2)
+                    else
+                        createNotification("Error", "Spawn location not found", 3)
+                    end
+                else
+                    createNotification("Error", "Lobby not found", 3)
+                end
+            else
+                createNotification("Error", "Character not found", 3)
+            end
+        end)
+        if not success then
+            warn("Tp to Lobby error: " .. tostring(err))
+            createNotification("Error", "Failed to teleport to lobby", 3)
+        end
+    end
+})
+
+FeatureTab:AddButton({
+    Title = "Tp to Map",
+    Description = "Teleport to Map",
+    Callback = function()
+        local success, err = pcall(function()
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local mapSpawn = workspace:FindFirstChild("Map")
+                if mapSpawn then
+                    local spawn = mapSpawn:FindFirstChild("Spawn")
+                    if spawn then
+                        player.Character.HumanoidRootPart.CFrame = spawn.CFrame + Vector3.new(0, 5, 0)
+                        createNotification("Teleport", "Teleported to Map", 2)
+                    else
+                        createNotification("Error", "Map spawn not found", 3)
+                    end
+                else
+                    createNotification("Error", "Map not found", 3)
+                end
+            else
+                createNotification("Error", "Character not found", 3)
+            end
+        end)
+        if not success then
+            warn("Tp to Map error: " .. tostring(err))
+            createNotification("Error", "Failed to teleport to map", 3)
+        end
+      createNotification("Error", "Failed to teleport to map", 3)
+    end
+})
+
+FeatureTab:AddButton({
+    Title = "Shrink",
+    Description = "It's working even you are Seeker even you are in Lobby",
+    Callback = function()
+        local success, err = pcall(function()
+            local dataRemoteEvent = ReplicatedStorage:WaitForChild("dataRemoteEvent")
+            local args = {
+                {
+                    {
+                        "Shrink"
+                    },
+                    "\005"
+                }
+            }
+            dataRemoteEvent:FireServer(unpack(args))
+            createNotification("Shrink", "Done", 2)
+        end)
+        if not success then
+            warn("Shrink error: " .. tostring(err))
+            createNotification("Error", "Failed to execute shrink command", 3)
+        end
+    end
+})
+
+FeatureTab:AddButton({
+    Title = "Grow",
+    Description = "Works everywhere",
+    Callback = function()
+        local success, err = pcall(function()
+            local dataRemoteEvent = ReplicatedStorage:WaitForChild("dataRemoteEvent")
+            local args = {
+                {
+                    {
+                        "Grow"
+                    },
+                    "\005"
+                }
+            }
+            dataRemoteEvent:FireServer(unpack(args))
+            createNotification("Grow", "Grow bigger", 2)
+        end)
+        if not success then
+            warn("Grow error: " .. tostring(err))
+            createNotification("Error", "Failed to execute grow command", 3)
+        end
+    end
+})
+
+-- ADMIN TAB
+AdminTab:AddButton({
+    Title = "Execute Infinite Yield",
+    Description = "Load Infinite Yield Panel",
+    Callback = function()
+        spawn(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+                createNotification("Admin", "Infinite Yield loaded successfully", 3)
+            end)
+            if not success then
+                warn("Infinite Yield error: " .. tostring(err))
+                createNotification("Error", "Failed to load Infinite Yield", 3)
+            end
+        end)
+    end
+})
+
+AdminTab:AddButton({
+    Title = "Execute Nameless Admin",
+    Description = "Load Nameless Admin Panel",
+    Callback = function()
+        spawn(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/FilteringEnabled/NamelessAdmin/main/Source"))()
+                createNotification("Admin", "Nameless Admin loaded successfully", 3)
+            end)
+            if not success then
+                warn("Nameless Admin error: " .. tostring(err))
+                createNotification("Error", "Failed to load Nameless Admin", 3)
+            end
+        end)
+    end
+})
+
+AdminTab:AddButton({
+    Title = "Execute Orca Admin",
+    Description = "Load Orca Admin Panel",
+    Callback = function()
+        spawn(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/richie0866/orca/master/public/latest.lua"))()
+                createNotification("Admin", "Orca Admin loaded successfully", 3)
+            end)
+            if not success then
+                warn("Orca Admin error: " .. tostring(err))
+                createNotification("Error", "Failed to load Orca Admin", 3)
+            end
+        end)
+    end
+})
+
+AdminTab:AddButton({
+    Title = "Execute CMD-X",
+    Description = "Load CMD-X Admin Panel",
+    Callback = function()
+        spawn(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/CMD-X/CMD-X/master/Source", true))()
+                createNotification("Admin", "CMD-X loaded successfully", 3)
+            end)
+            if not success then
+                warn("CMD-X error: " .. tostring(err))
+                createNotification("Error", "Failed to load CMD-X", 3)
+            end
+        end)
+    end
+})
+
+AdminTab:AddButton({
+    Title = "Execute Reviz Admin",
+    Description = "Load Reviz Admin Panel",
+    Callback = function()
+        spawn(function()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/Caniwq2N", true))()
+                createNotification("Admin", "Reviz Admin loaded successfully", 3)
+            end)
+            if not success then
+                warn("Reviz Admin error: " .. tostring(err))
+                createNotification("Error", "Failed to load Reviz Admin", 3)
+            end
+        end)
+    end
+})
+
+-- Handle new players joining (for ESP)
+Players.PlayerAdded:Connect(function(newPlayer)
+    newPlayer.CharacterAdded:Connect(function()
+        wait(1)
+        if espLinesEnabled and not espLines[newPlayer] then
+            createESPLine(newPlayer)
+        end
+        if espBoxesEnabled and not espBoxes[newPlayer] then
+            createESPBox(newPlayer)
+        end
+    end)
+end)
+
+-- Handle players leaving (cleanup ESP)
+Players.PlayerRemoving:Connect(function(leavingPlayer)
+    if espLines[leavingPlayer] then
+        espLines[leavingPlayer]:Remove()
+        espLines[leavingPlayer] = nil
+    end
+    if espBoxes[leavingPlayer] then
+        espBoxes[leavingPlayer]:Remove()
+        espBoxes[leavingPlayer] = nil
+    end
+end)
+
+-- Handle character respawning for other players
+for _, targetPlayer in pairs(Players:GetPlayers()) do
+    if targetPlayer ~= player then
+        targetPlayer.CharacterAdded:Connect(function()
+            wait(1)
+            if espLinesEnabled and not espLines[targetPlayer] then
+                createESPLine(targetPlayer)
+            end
+            if espBoxesEnabled and not espBoxes[targetPlayer] then
+                createESPBox(targetPlayer)
+            end
+        end)
+    end
+end
+
+-- Handle character respawning for local player
+player.CharacterAdded:Connect(function(character)
+    spawn(function()
+        wait(1)
+
+        local success, err = pcall(function()
+            if speedEnabled then
+                local hum = character:FindFirstChildWhichIsA("Humanoid")
+                if hum then
+                    hum.WalkSpeed = speedValue
+                end
+            end
+
+            if jumpEnabled then
+                local hum = character:FindFirstChildWhichIsA("Humanoid")
+                if hum then
+                    if hum.JumpHeight then
+                        hum.JumpHeight = jumpValue
+                    else
+                        hum.JumpPower = jumpValue
+                    end
+                end
+            end
+
+            if noclipEnabled then
+                setNoclip(true)
+            end
+
+            if infiniteJumpEnabled then
+                setInfiniteJump(true)
+            end
+
+            -- Auto teleport back to platform if AutoWin is enabled
+            if autoWinEnabled and autoWinPlatform and autoWinPlatform.Parent then
+                wait(0.5) -- Wait a bit for character to fully load
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local targetPosition = autoWinPlatform.Position + Vector3.new(0, 10, 0)
+                    character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
+                    character.HumanoidRootPart.Anchored = true
+                    wait(0.1)
+                    character.HumanoidRootPart.Anchored = false
+                    createNotification("AutoWin", "Respawned and teleported back to platform", 2)
+                end
+            end
+        end)
+
+        if not success then
+            warn("Character respawn handling error: " .. tostring(err))
+        end
+    end)
+end)
+
+-- Don't clean up AutoWin when player dies - let it persist
+player.CharacterRemoving:Connect(function()
+    -- AutoWin will persist and auto-teleport on respawn
+    if autoWinEnabled then
+        createNotification("AutoWin", "Character died, will respawn on platform", 2)
+    end
+end)
+
+-- SETTINGS TAB
+if SaveManager and InterfaceManager then
+    local success, err = pcall(function()
+        SaveManager:SetLibrary(Fluent)
+        InterfaceManager:SetLibrary(Fluent)
+        InterfaceManager:BuildInterfaceSection(SettingsTab)
+        SaveManager:BuildConfigSection(SettingsTab)
+    end)
+
+    if not success then
+        warn("Settings tab error: " .. tostring(err))
+    end
+
+    spawn(function()
+        pcall(function()
+            SaveManager:LoadAutoloadConfig()
+        end)
+    end)
+end
+
+-- Select first tab
+pcall(function()
+    Window:SelectTab(1)
+end)
+
+-- Mini Toggle Button
+local function createMiniToggle()
+    local success, err = pcall(function()
+        local existing = playerGui:FindFirstChild("ViperToggle")
+        if existing then
+            existing:Destroy()
+        end
+
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ViperToggle"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = playerGui
+
+        local toggleFrame = Instance.new("Frame")
+        toggleFrame.Name = "ToggleFrame"
+        toggleFrame.Size = UDim2.new(0, 60, 0, 60)
+        toggleFrame.Position = UDim2.new(1, -70, 0.5, -195)
+        toggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        toggleFrame.BorderSizePixel = 0
+        toggleFrame.Parent = screenGui
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = toggleFrame
+
+        local toggleButton = Instance.new("TextButton")
+        toggleButton.Size = UDim2.new(1, 0, 1, 0)
+        toggleButton.BackgroundTransparency = 1
+        toggleButton.Text = "V"
+        toggleButton.TextColor3 = Color3.fromRGB(0, 255, 127)
+        toggleButton.TextScaled = true
+        toggleButton.Font = Enum.Font.GothamBold
+        toggleButton.Parent = toggleFrame
+
+        local isVisible = true
+        local debounce = false
+
+        local function toggleWindow()
+            if debounce then return end
+            debounce = true
+
+            pcall(function()
+                isVisible = not isVisible
+                if Window and Window.Root then
+                    Window.Root.Visible = isVisible
+                end
+            end)
+
+            spawn(function()
+                wait(0.5)
+                debounce = false
+            end)
+        end
+
+        toggleButton.MouseButton1Click:Connect(toggleWindow)
+        
+        -- Make draggable
+        local dragging = false
+        local dragStart = nil
+        local startPos = nil
+
+        toggleFrame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = toggleFrame.Position
+            end
+        end)
+
+        toggleFrame.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                local delta = input.Position - dragStart
+                toggleFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+
+        toggleFrame.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+    end)
+
+    if not success then
+        warn("Toggle creation error: " .. tostring(err))
+    end
+end
+
+createMiniToggle()
+
+-- Initial notifications
+createNotification("Viper Hub", "Welcome to Shrink Hide & Seek", 3)
+wait(4)
+createNotification("Viper", "No AntiCheatSystem Report immediately If they update and release. AntiCheat System"

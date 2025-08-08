@@ -1,1 +1,43 @@
-404: Not Found
+  local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+if not firetouchinterest then
+    warn("Need 'firetouchinterest' to start a script!")
+    Fluent:Notify({
+        Title = "oops...",
+        Content = "Ur exploit need 'firetouchinterest' to start a script!",
+        SubContent = "By BadScriptsMaker",
+        Duration = 7
+    })
+    task.wait(7)
+    return
+else
+print("Exploit supports 'firetouchinterest'.")
+print("Starting a script")
+
+if game.PlaceId == 13027675420 then
+
+local part = workspace.PointFolder["5500"]
+local player = game.Players.LocalPlayer.Character
+local hrp = player:FindFirstChildWhichIsA("BasePart")
+
+firetouchinterest(part,hrp,0)
+task.wait()
+firetouchinterest(part,hrp,1)
+
+Fluent:Notify({
+        Title = "ez game lol",
+        Content = "Completed a game!",
+        SubContent = "By BadScriptsMaker",
+        Duration = 6
+    })
+    warn("game is completed ;)")
+else
+Fluent:Notify({
+        Title = "Error",
+        Content = "Wrong game\nGame to work:\n Effortless Tower",
+        SubContent = "By BadScriptsMaker",
+        Duration = 6
+    })
+    warn("Wrong game. Script is stopped")
+end
+end

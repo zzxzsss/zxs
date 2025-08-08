@@ -1,1 +1,463 @@
-404: Not Found
+
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- Create Window
+local Window = Fluent:CreateWindow({
+    Title = "S.E.W.H ",
+    SubTitle = "Created By zzzhub 👽",
+    TabWidth = 130,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+-- Create Tabs
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    AutoWin = Window:AddTab({ Title = "AutoWin", Icon = "trophy" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Credits = Window:AddTab({ Title = "Credits", Icon = "info" })
+}
+
+-- Notification function
+local function Notify(title, content, duration)
+    Fluent:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 3
+    })
+end
+
+-- Wait for Fluent to load
+task.wait(2)
+
+-- Load Bypasses after Fluent loads
+task.spawn(function()
+    pcall(function()
+        -- Adonis Bypass
+        local getinfo = getinfo or debug.getinfo
+        local DEBUG = false
+        local Hooked = {}
+        local Detected, Kill
+        if setthreadidentity then setthreadidentity(2) end
+        
+        for i, v in getgc(true) do
+            if typeof(v) == "table" then
+                local DetectFunc = rawget(v, "Detected")
+                local KillFunc = rawget(v, "Kill")
+                
+                if typeof(DetectFunc) == "function" and not Detected then
+                    Detected = DetectFunc
+                    local Old; Old = hookfunction(Detected, function(Action, Info, NoCrash)
+                        if Action ~= "_" then
+                            if DEBUG then
+                                warn(("Adonis AntiCheat flagged\nMethod: %s\nInfo: %s"):format(tostring(Action), tostring(Info)))
+                            end
+                        end
+                        return true
+                    end)
+                    table.insert(Hooked, Detected)
+                end
+                
+                if rawget(v, "Variables") and rawget(v, "Process") and typeof(KillFunc) == "function" and not Kill then
+                    Kill = KillFunc
+                    local Old; Old = hookfunction(Kill, function(Info)
+                        if DEBUG then
+                            warn(("Adonis AntiCheat tried to kill (fallback): %s"):format(tostring(Info)))
+                        end
+                    end)
+                    table.insert(Hooked, Kill)
+                end
+            end
+        end
+        
+        local Old; Old = hookfunction(getrenv().debug.info, newcclosure(function(...)
+            local LevelOrFunc, Info = ...
+            if Detected and LevelOrFunc == Detected then
+                if DEBUG then
+                    warn("zins | adonis bypassed")
+                end
+                return coroutine.yield(coroutine.running())
+            end
+            return Old(...)
+        end))
+        
+        if setthreadidentity then setthreadidentity(7) end
+        
+        Notify("Bypass", "Adonis Bypass loaded successfully!", 3)
+    end)
+end)
+
+-- Variables
+local semiGodActive = false
+local semiGodHook
+local sideBaseplatePos = nil
+local lobbyPos = Vector3.new(0, 10, 0)
+local sideBaseplateSize = Vector3.new(80, 2, 80)
+_G.CustomJump = 80
+_G.CustomSprint = 50
+
+-- Get sprint-related closures
+local aux = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Upbolt/Hydroxide/revision/ohaux.lua"))()
+local scriptPath = game:GetService("ReplicatedStorage").Resources.Client.SprintHandler
+local closure1 = aux.searchClosure(scriptPath, "startSprint", 10, {
+    [1] = "MoveDirection", [2] = "Magnitude", [3] = 0.2, [4] = "Play",
+    [5] = "DestroyIdentifier", [6] = "BaseRegen"
+})
+local closure2 = aux.searchClosure(scriptPath, "startSprint", 4, {
+    [1] = "MoveDirection", [2] = "Magnitude", [3] = 0.2, [4] = "Play",
+    [5] = "DestroyIdentifier", [6] = "BaseRegen"
+})
+
+-- ===== MAIN TAB =====
+local MainSection = Tabs.Main:AddSection("Main Features")
+
+-- Infinite Stamina
+local InfStamToggle = Tabs.Main:AddToggle("InfStam", {
+    Title = "Infinite Stamina",
+    Default = false
+})
+InfStamToggle:OnChanged(function(state)
+    if closure1 then debug.getupvalue(closure1, 10)["MaxStamina"] = state and 1e308 or 100 end
+    if closure2 then debug.setupvalue(closure2, 4, state and 1e308 or 100) end
+end)
+
+-- Semi God Mode
+local SemiGodToggle = Tabs.Main:AddToggle("SemiGod", {
+    Title = "Semi God Mode",
+    Default = false
+})
+SemiGodToggle:OnChanged(function(state)
+    if state and not semiGodActive then
+        if hookmetamethod then
+            semiGodHook = hookmetamethod(game, "__namecall", function(self, ...)
+                local args = {...}
+                local method = getnamecallmethod()
+                if method == "FireServer" and self.Name == "Asynchronous" then
+                    if args[1] == "HurtSelf" then
+                        args[3] = 0.001
+                    elseif args[1] == "CharHit" then
+                        args[4] = "Humanoid"
+                    end
+                    return semiGodHook(self, unpack(args))
+                end
+                return semiGodHook(self, ...)
+            end)
+            semiGodActive = true
+            Notify("Semi God", "Semi God Mode enabled!", 3)
+        else
+            game.Players.LocalPlayer:Kick("Exploit not supported!")
+        end
+    elseif not state and semiGodActive then
+        Notify("Semi God", "Rejoin to fully disable Semi God Mode", 5)
+        semiGodActive = false
+    end
+end)
+
+-- AntiVoid Button
+local AntiVoidBtn = Tabs.Main:AddButton({
+    Title = "AntiVoid / AntiDrown",
+    Description = "Creates a safety platform below the map",
+    Callback = function()
+        local part = Instance.new("Part")
+        part.Size = Vector3.new(1000, 1, 1000)
+        part.Position = Vector3.new(0, -10, 0)
+        part.Anchored = true
+        part.CanCollide = true
+        part.Transparency = 0.4
+        part.BrickColor = BrickColor.new("Lime green")
+        part.Name = "AntiVoid"
+        part.Parent = workspace
+        Notify("AntiVoid", "AntiVoid platform created!", 3)
+    end
+})
+
+-- Noclip
+local NoclipToggle = Tabs.Main:AddToggle("Noclip", {
+    Title = "Noclip",
+    Default = false
+})
+NoclipToggle:OnChanged(function(state)
+    if state then
+        _G.NoclipLoop = game:GetService("RunService").Stepped:Connect(function()
+            local char = game.Players.LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if _G.NoclipLoop then _G.NoclipLoop:Disconnect() end
+    end
+end)
+
+-- ===== AUTOWIN TAB =====
+local AutoWinSection = Tabs.AutoWin:AddSection("AutoWin Features")
+
+-- Camp Under Map
+local CampBtn = Tabs.AutoWin:AddButton({
+    Title = "Camp Under Map (Deeper)",
+    Description = "Creates a platform deep underground",
+    Callback = function()
+        local platform = Instance.new("Part")
+        platform.Size = Vector3.new(500, 1, 500)
+        platform.Position = Vector3.new(0, -500, 0)
+        platform.Anchored = true
+        platform.CanCollide = true
+        platform.Transparency = 0.7
+        platform.Color = Color3.fromRGB(0, 255, 0)
+        platform.Name = "AutoWinPlatform"
+        platform.Parent = workspace
+        local char = game.Players.LocalPlayer.Character
+        if char then char:MoveTo(Vector3.new(0, -498, 0)) end
+        Notify("AutoWin", "Camp platform created and teleported!", 3)
+    end
+})
+
+-- Spawn Side Baseplate
+local SideBaseplateBtn = Tabs.AutoWin:AddButton({
+    Title = "Spawn Side Baseplate",
+    Description = "Creates a baseplate outside the lobby",
+    Callback = function()
+        local ws = game:GetService("Workspace")
+        local found = false
+        for _, obj in ipairs(ws:GetDescendants()) do
+            if obj:IsA("SpawnLocation") and (obj.Name:lower():find("lobby") or obj.Name:lower():find("spawn")) then
+                lobbyPos = obj.Position
+                found = true
+                break
+            end
+        end
+        sideBaseplatePos = lobbyPos + Vector3.new(120, 5, 0)
+        local part = Instance.new("Part")
+        part.Size = sideBaseplateSize
+        part.Position = sideBaseplatePos
+        part.Anchored = true
+        part.CanCollide = true
+        part.Transparency = 0.2
+        part.BrickColor = BrickColor.new("Bright blue")
+        part.Name = "AutoWinSideBaseplate"
+        part.Parent = workspace
+        Notify("Side Baseplate", "Baseplate spawned outside lobby!", 3)
+    end
+})
+
+-- TP to Side Baseplate
+local TPSideBtn = Tabs.AutoWin:AddButton({
+    Title = "TP to Side Baseplate",
+    Description = "Teleports you to the side baseplate",
+    Callback = function()
+        if sideBaseplatePos then
+            local char = game.Players.LocalPlayer.Character
+            if char then char:MoveTo(sideBaseplatePos + Vector3.new(0, 5, 0)) end
+            Notify("Teleport", "Teleported to side baseplate!", 3)
+        else
+            Notify("Error", "Please spawn the side baseplate first!", 3)
+        end
+    end
+})
+
+-- TP to Lobby
+local TPLobbyBtn = Tabs.AutoWin:AddButton({
+    Title = "TP to Lobby",
+    Description = "Teleports you back to the lobby",
+    Callback = function()
+        local ws = game:GetService("Workspace")
+        local found = false
+        for _, obj in ipairs(ws:GetDescendants()) do
+            if obj:IsA("SpawnLocation") and (obj.Name:lower():find("lobby") or obj.Name:lower():find("spawn")) then
+                lobbyPos = obj.Position
+                found = true
+                break
+            end
+        end
+        local char = game.Players.LocalPlayer.Character
+        if char then char:MoveTo(lobbyPos) end
+        if found then
+            Notify("Teleport", "Teleported to lobby!", 3)
+        else
+            Notify("Teleport", "Teleported to default lobby position!", 3)
+        end
+    end
+})
+
+-- TP to Map Middle
+local TPMapBtn = Tabs.AutoWin:AddButton({
+    Title = "TP to Map Middle",
+    Description = "Teleports you to the middle of the map",
+    Callback = function()
+        local map = workspace:FindFirstChild("Map")
+        local middle = Vector3.new(0, 30, 0)
+        if map and map:IsA("Model") then
+            if map.PrimaryPart then
+                middle = map.PrimaryPart.Position
+            else
+                local min, max
+                for _, part in ipairs(map:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        min = min and Vector3.new(
+                            math.min(min.X, part.Position.X),
+                            math.min(min.Y, part.Position.Y),
+                            math.min(min.Z, part.Position.Z)
+                        ) or part.Position
+                        max = max and Vector3.new(
+                            math.max(max.X, part.Position.X),
+                            math.max(max.Y, part.Position.Y),
+                            math.max(max.Z, part.Position.Z)
+                        ) or part.Position
+                    end
+                end
+                if min and max then
+                    middle = (min + max) / 2
+                    middle = Vector3.new(middle.X, middle.Y + 10, middle.Z)
+                end
+            end
+        end
+        local char = game.Players.LocalPlayer.Character
+        if char then char:MoveTo(middle) end
+        Notify("Teleport", string.format("Teleported to map middle: (%.1f, %.1f, %.1f)", middle.X, middle.Y, middle.Z), 3)
+    end
+})
+
+-- ===== MISC TAB =====
+local MiscSection = Tabs.Misc:AddSection("Miscellaneous Features")
+
+-- Infinite Jump
+local InfJumpToggle = Tabs.Misc:AddToggle("InfJump", {
+    Title = "Infinite Jump",
+    Default = false
+})
+InfJumpToggle:OnChanged(function(enabled)
+    if enabled then
+        _G.InfiniteJumpEnabled = true
+        if not _G.InfiniteJumpConnection then
+            _G.InfiniteJumpConnection = game:GetService("UserInputService").JumpRequest:Connect(function()
+                if _G.InfiniteJumpEnabled then
+                    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if hum then hum:ChangeState("Jumping") end
+                end
+            end)
+        end
+    else
+        _G.InfiniteJumpEnabled = false
+        if _G.InfiniteJumpConnection then
+            _G.InfiniteJumpConnection:Disconnect()
+            _G.InfiniteJumpConnection = nil
+        end
+    end
+end)
+
+-- JumpBoost Toggle
+local JumpBoostToggle = Tabs.Misc:AddToggle("JumpBoost", {
+    Title = "Jump Boost",
+    Default = false
+})
+JumpBoostToggle:OnChanged(function(enabled)
+    if enabled then
+        _G.JumpLoop = true
+        spawn(function()
+            while _G.JumpLoop do
+                task.wait(0.1)
+                local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum.JumpPower = _G.CustomJump or 80 end
+            end
+        end)
+    else
+        _G.JumpLoop = false
+        local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.JumpPower = 50 end
+    end
+end)
+
+-- Jump Power Slider
+local JumpSlider = Tabs.Misc:AddSlider("JumpPower", {
+    Title = "Jump Power",
+    Description = "Set your jump power",
+    Default = 80,
+    Min = 1,
+    Max = 1000,
+    Rounding = 1,
+    Callback = function(Value)
+        _G.CustomJump = Value
+    end
+})
+
+-- Sprint Boost Toggle
+local SprintBoostToggle = Tabs.Misc:AddToggle("SprintBoost", {
+    Title = "Sprint Boost(not working i don't know",
+    Default = false
+})
+SprintBoostToggle:OnChanged(function(enabled)
+    if enabled then
+        _G.SprintLoop = true
+        spawn(function()
+            while _G.SprintLoop do
+                task.wait(0.1)
+                local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then 
+                    hum.WalkSpeed = _G.CustomSprint or 50
+                end
+            end
+        end)
+        Notify("Sprint Boost", "Sprint boost enabled!", 3)
+    else
+        _G.SprintLoop = false
+        local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = 16 end
+        Notify("Sprint Boost", "Sprint boost disabled!", 3)
+    end
+end)
+
+-- Sprint Speed Slider
+local SprintSlider = Tabs.Misc:AddSlider("SprintSpeed", {
+    Title = "Sprint Speed",
+    Description = "Set your sprint speed",
+    Default = 50,
+    Min = 10,
+    Max = 1000,
+    Rounding = 1,
+    Callback = function(Value)
+        _G.CustomSprint = Value
+    end
+})
+
+-- ===== CREDITS TAB =====
+local CreditsSection = Tabs.Credits:AddSection("Credits")
+
+Tabs.Credits:AddParagraph({
+    Title = "Creator",
+    Content = "Created by ktro!"
+})
+
+local DiscordBtn = Tabs.Credits:AddButton({
+    Title = "Copy Discord Link",
+    Description = "Copy Discord server link to clipboard",
+    Callback = function()
+        setclipboard(" ")
+        Notify("Copied!", "Discord link copied to clipboard!", 3)
+    end
+})
+
+-- Save Manager
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+InterfaceManager:SetFolder("FluentScriptHub")
+SaveManager:SetFolder("FluentScriptHub/specific-game")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Credits)
+SaveManager:BuildConfigSection(Tabs.Credits)
+
+Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "S.E.W.H ⚡",
+    Content = "Script loaded successfully! Bypasses loading...",
+    Duration = 5
+})

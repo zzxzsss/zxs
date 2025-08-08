@@ -1,1 +1,1 @@
-404: Not Found
+print("ts isnt needed for now ")

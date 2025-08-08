@@ -1,1 +1,1048 @@
-404: Not Found
+ 
+-- Load DummyUI Library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zzxzsss/zxs/refs/heads/main/ui/dummyui"))()
+
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Create Main Window
+local Window = Library:Window({
+    Title = "zzz hub",
+    Desc = "by ktro",
+    Icon = 105059922903197,
+    Theme = "Dark",
+    Config = {
+        Keybind = Enum.KeyCode.LeftControl,
+        Size = UDim2.new(0, 500, 0, 400)
+    },
+    CloseUIButton = {
+        Enabled = true,
+        Text = "zzz hub"
+    }
+})
+
+-- Create Tabs
+local MainTab = Window:Tab({Title = "Main", Icon = "star"})
+local MovementTab = Window:Tab({Title = "Movement", Icon = "zap"})
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
+
+-- Variables
+local playerHighlights = {}  
+local coinHighlights = {}
+local murdererESPEnabled = false
+local sheriffESPEnabled = false
+local innocentESPEnabled = false
+local coinESPEnabled = false
+local gunESPEnabled = false
+local gunHighlight = nil
+local loopTPMurder = false
+local loopShootMurder = false
+local loopTPStab = false
+
+-- ESP Section
+MainTab:Section({Title = "ESP Features"})
+
+local function updateESPForPlayer(player)
+    if not player.Character then
+        if playerHighlights[player] then
+            playerHighlights[player]:Destroy()
+            playerHighlights[player] = nil
+        end
+        return
+    end
+
+    local character = player.Character
+
+    local function hasTool(toolName)
+        local found = false
+        if player:FindFirstChild("Backpack") then
+            for _, tool in ipairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") and tool.Name == toolName then
+                    found = true
+                    break
+                end
+            end
+        end
+        if not found then
+            for _, item in ipairs(character:GetChildren()) do
+                if item:IsA("Tool") and item.Name == toolName then
+                    found = true
+                    break
+                end
+            end
+        end
+        return found
+    end
+
+    local isMurderer = hasTool("Knife")
+    local isSheriff = (not isMurderer) and hasTool("Gun")
+    local isInnocent = (not isMurderer and not isSheriff)
+
+    local desiredColor
+    if isMurderer and murdererESPEnabled then
+        desiredColor = Color3.new(1, 0, 0)
+    elseif isSheriff and sheriffESPEnabled then
+        desiredColor = Color3.new(0, 0, 1)
+    elseif isInnocent and innocentESPEnabled then
+        desiredColor = Color3.new(0, 1, 0)
+    end
+
+    if desiredColor then
+        if not playerHighlights[player] then
+            local h = Instance.new("Highlight")
+            h.Name = "ESPHighlight"
+            h.FillTransparency = 0.5
+            h.OutlineTransparency = 1
+            h.Adornee = character
+            h.FillColor = desiredColor
+            h.Parent = character
+            playerHighlights[player] = h
+        else
+            playerHighlights[player].FillColor = desiredColor
+            if playerHighlights[player].Adornee ~= character then
+                playerHighlights[player].Adornee = character
+            end
+        end
+    else
+        if playerHighlights[player] then
+            playerHighlights[player]:Destroy()
+            playerHighlights[player] = nil
+        end
+    end
+end
+
+-- Murderer ESP Toggle
+MainTab:Toggle({
+    Title = "Murderer ESP",
+    Desc = "Highlight the murderer in red",
+    Value = false,
+    Callback = function(state)
+        murdererESPEnabled = state
+        if state then
+            spawn(function()
+                while murdererESPEnabled do
+                    local success, err = pcall(function()
+                        for _, player in ipairs(Players:GetPlayers()) do
+                            if player ~= LocalPlayer then
+                                updateESPForPlayer(player)
+                            end
+                        end
+                    end)
+                    if not success then
+                    end
+                    wait(1)
+                end
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and playerHighlights[player] then
+                        playerHighlights[player]:Destroy()
+                        playerHighlights[player] = nil
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Sheriff ESP Toggle
+MainTab:Toggle({
+    Title = "Sheriff ESP",
+    Desc = "Highlight the sheriff in blue",
+    Value = false,
+    Callback = function(state)
+        sheriffESPEnabled = state
+        if state then
+            spawn(function()
+                while sheriffESPEnabled do
+                    local success, err = pcall(function()
+                        for _, player in ipairs(Players:GetPlayers()) do
+                            if player ~= LocalPlayer then
+                                updateESPForPlayer(player)
+                            end
+                        end
+                    end)
+                    if not success then
+                    end
+                    wait(1)
+                end
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and playerHighlights[player] then
+                        playerHighlights[player]:Destroy()
+                        playerHighlights[player] = nil
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Innocent ESP Toggle
+MainTab:Toggle({
+    Title = "Innocent ESP",
+    Desc = "Highlight innocent players in green",
+    Value = false,
+    Callback = function(state)
+        innocentESPEnabled = state
+        if state then
+            spawn(function()
+                while innocentESPEnabled do
+                    local success, err = pcall(function()
+                        for _, player in ipairs(Players:GetPlayers()) do
+                            if player ~= LocalPlayer then
+                                updateESPForPlayer(player)
+                            end
+                        end
+                    end)
+                    if not success then
+                    end
+                    wait(1)
+                end
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and playerHighlights[player] then
+                        playerHighlights[player]:Destroy()
+                        playerHighlights[player] = nil
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- Coin ESP Toggle
+MainTab:Toggle({
+    Title = "Coin ESP",
+    Desc = "Highlight all coins in cyan",
+    Value = false,
+    Callback = function(state)
+        coinESPEnabled = state
+        if state then
+            spawn(function()
+                while coinESPEnabled do
+                    local success, err = pcall(function()
+                        for _, container in ipairs(workspace:GetDescendants()) do
+                            if container:IsA("Model") and container.Name == "CoinContainer" then
+                                for _, coinServer in ipairs(container:GetChildren()) do
+                                    if coinServer.Name == "Coin_Server" then
+                                        local coinVisual = coinServer:FindFirstChild("CoinVisual")
+                                        if coinVisual then
+                                            local mainCoin = coinVisual:FindFirstChild("MainCoin")
+                                            if mainCoin and mainCoin:IsA("MeshPart") then
+                                                if not coinHighlights[mainCoin] then
+                                                    local h = Instance.new("Highlight")
+                                                    h.Name = "CoinESPHighlight"
+                                                    h.FillColor = Color3.fromRGB(0, 255, 255)
+                                                    h.FillTransparency = 0.5
+                                                    h.OutlineTransparency = 1
+                                                    h.Adornee = mainCoin
+                                                    h.Parent = mainCoin
+                                                    coinHighlights[mainCoin] = h
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    if not success then
+                    end
+                    wait(0.1)
+                end
+                for coinObj, h in pairs(coinHighlights) do
+                    if h then
+                        h:Destroy()
+                    end
+                end
+                coinHighlights = {}
+            end)
+        end
+    end
+})
+
+-- Gun ESP Toggle
+MainTab:Toggle({
+    Title = "Gun ESP",
+    Desc = "Highlight the dropped gun in yellow",
+    Value = false,
+    Callback = function(state)
+        gunESPEnabled = state
+        if state then
+            spawn(function()
+                while gunESPEnabled do
+                    local success, err = pcall(function()
+                        for _, obj in ipairs(workspace:GetDescendants()) do
+                            if obj:IsA("BasePart") and obj.Name == "GunDrop" then
+                                if not gunHighlight then
+                                    local h = Instance.new("Highlight")
+                                    h.Name = "GunESPHighlight"
+                                    h.FillColor = Color3.fromRGB(255, 255, 0)
+                                    h.FillTransparency = 0.5
+                                    h.OutlineTransparency = 1
+                                    h.Adornee = obj
+                                    h.Parent = obj
+                                    gunHighlight = h
+                                elseif gunHighlight.Adornee ~= obj then
+                                    gunHighlight.Adornee = obj
+                                end
+                            end
+                        end
+                    end)
+                    if not success then end
+                    task.wait(0.1)
+                end
+                if gunHighlight then
+                    gunHighlight:Destroy()
+                    gunHighlight = nil
+                end
+            end)
+        else
+            if gunHighlight then
+                gunHighlight:Destroy()
+                gunHighlight = nil
+            end
+        end
+    end
+})
+
+-- Innocent Section
+MainTab:Section({Title = "Innocent Features"})
+
+-- TP to Gun Button
+MainTab:Button({
+    Title = "TP to Gun",
+    Desc = "Teleport to dropped gun if available",
+    Callback = function()
+        local gun = nil
+
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v.Name == "GunDrop" and v:IsA("BasePart") then
+                gun = v
+                break
+            end
+        end
+
+        if gun then
+            local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            hrp.CFrame = gun.CFrame + Vector3.new(0, 5, 0)
+            Window:Notify({
+                Title = "Gun Found",
+                Desc = "Teleported to the Gun!",
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Gun Not Found",
+                Desc = "No GunDrop found in the map!",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Sheriff Section
+MainTab:Section({Title = "Sheriff Features"})
+
+-- Kill Murderer Toggle
+MainTab:Toggle({
+    Title = "Kill Murderer",
+    Desc = "Auto TP and shoot the murderer",
+    Value = false,
+    Callback = function(state)
+        loopTPMurder = state
+        loopShootMurder = state
+
+        if state then
+            -- TP Loop
+            task.spawn(function()
+                while loopTPMurder do
+                    local murder = nil
+
+                    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                        if player ~= game.Players.LocalPlayer then
+                            local hasKnife = false
+
+                            if player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife") then
+                                hasKnife = true
+                            end
+
+                            if player.Character and player.Character:FindFirstChild("Knife") then
+                                hasKnife = true
+                            end
+
+                            if hasKnife then
+                                murder = player
+                                break
+                            end
+                        end
+                    end
+
+                    if murder and murder.Character and murder.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = murder.Character.HumanoidRootPart
+
+                        local myChar = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+                        local myHRP = myChar:WaitForChild("HumanoidRootPart")
+
+                        local backCFrame = hrp.CFrame * CFrame.new(0, 0, 15)
+                        myHRP.CFrame = backCFrame + Vector3.new(0, 0, 0)
+                    end
+
+                    task.wait(0)
+                end
+            end)
+
+            -- Shoot Loop
+            task.spawn(function()
+                while loopShootMurder do
+                    local murder = nil
+
+                    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                        if player ~= game.Players.LocalPlayer then
+                            local hasKnife = false
+
+                            if player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife") then
+                                hasKnife = true
+                            end
+
+                            if player.Character and player.Character:FindFirstChild("Knife") then
+                                hasKnife = true
+                            end
+
+                            if hasKnife then
+                                murder = player
+                                break
+                            end
+                        end
+                    end
+
+                    if murder and murder.Character and murder.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = murder.Character.HumanoidRootPart
+                        local murderPos = hrp.Position
+
+                        local velocity = hrp.Velocity
+
+                        local pingMs = 0
+                        local stats = game:GetService("Stats")
+                        if stats:FindFirstChild("Network") and stats.Network:FindFirstChild("ServerStatsItem") then
+                            local pingStat = stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+                            if pingStat then
+                                pingMs = pingStat:GetValue()
+                            end
+                        end
+                        local pingSec = math.clamp(pingMs / 1000, 0, 1)
+
+                        local leadOffset = velocity * pingSec
+
+                        if velocity.Magnitude < 2 then
+                            leadOffset = Vector3.new(0, 0, 0)
+                        end
+
+                        local targetPos = murderPos + leadOffset
+
+                        local args = {
+                            1,
+                            Vector3.new(targetPos.X, targetPos.Y, targetPos.Z),
+                            "AH2"
+                        }
+
+                        game:GetService("Players").LocalPlayer.Character:WaitForChild("Gun"):WaitForChild("KnifeLocal"):WaitForChild("CreateBeam"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+
+                        Window:Notify({
+                            Title = "Shot Fired",
+                            Desc = "Fired ahead of " .. murder.Name,
+                            Time = 3
+                        })
+                    else
+                        Window:Notify({
+                            Title = "Error",
+                            Desc = "No player holding Knife found!",
+                            Time = 3
+                        })
+                    end
+
+                    task.wait(0)
+                end
+            end)
+        end
+    end
+})
+
+-- Auto Coin Collection Section
+MainTab:Section({Title = "Auto Coin Collection"})
+
+-- Auto Coin Collection Variables
+local autoCoinEnabled = false
+local coinCollectionRunning = false
+
+-- Auto Coin Collection Toggle
+MainTab:Toggle({
+    Title = "Auto Coin Collection",
+    Desc = "Automatically collect all coins on the map",
+    Value = false,
+    Callback = function(state)
+        autoCoinEnabled = state
+        
+        if state and not coinCollectionRunning then
+            coinCollectionRunning = true
+            
+            task.spawn(function()
+                local TweenService = game:GetService("TweenService")
+                local LP = game.Players.LocalPlayer
+                
+                local function GetMap()
+                    while autoCoinEnabled do
+                        for _, obj in ipairs(workspace:GetChildren()) do
+                            if obj:GetAttribute("MapID") and obj:FindFirstChild("CoinContainer") then
+                                return obj
+                            end
+                        end
+                        task.wait()
+                    end
+                    return nil
+                end
+
+                local function getNearest()
+                    local map = GetMap()
+                    if not map then return nil end
+                    
+                    local closest, dist = nil, math.huge
+                    for _, coin in ipairs(map.CoinContainer:GetChildren()) do
+                        local v = coin:FindFirstChild("CoinVisual")
+                        if v and not v:GetAttribute("Collected") then
+                            local char = LP.Character
+                            if char and char:FindFirstChild("HumanoidRootPart") then
+                                local d = (char.HumanoidRootPart.Position - coin.Position).Magnitude
+                                if d < dist then
+                                    closest = coin
+                                    dist = d
+                                end
+                            end
+                        end
+                    end
+                    return closest
+                end
+
+                local function tp(hp)
+                    local char = LP.Character
+                    if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Humanoid") then
+                        return
+                    end
+                    
+                    local HRP = char.HumanoidRootPart
+                    local Humanoid = char.Humanoid
+                    
+                    Humanoid:ChangeState(11)
+                    local d = (HRP.Position - hp.Position).Magnitude
+                    local t = TweenService:Create(HRP, TweenInfo.new(d / 25, Enum.EasingStyle.Linear), {CFrame = hp.CFrame})
+                    t:Play()
+                    t.Completed:Wait()
+                end
+
+                while autoCoinEnabled do
+                    local target = getNearest()
+                    if target then
+                        tp(target)
+                        local v = target:FindFirstChild("CoinVisual")
+                        while v and not v:GetAttribute("Collected") and v.Parent and autoCoinEnabled do
+                            local n = getNearest()
+                            if n and n ~= target then break end
+                            task.wait()
+                        end
+                    else
+                        task.wait(1) -- Wait if no coins found
+                    end
+                    task.wait(0.1)
+                end
+                
+                coinCollectionRunning = false
+            end)
+            
+            Window:Notify({
+                Title = "Auto Coin Collection",
+                Desc = "Started collecting coins automatically!",
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Auto Coin Collection",
+                Desc = "Stopped collecting coins.",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Murderer Section
+MainTab:Section({Title = "Murderer Features"})
+
+-- Kill All Toggle
+MainTab:Toggle({
+    Title = "Kill All",
+    Desc = "Auto TP to nearest players and stab",
+    Value = false,
+    Callback = function(state)
+        loopTPStab = state
+
+        if state then
+            task.spawn(function()
+                while loopTPStab do
+                    local closestPlayer = nil
+                    local shortestDistance = math.huge
+
+                    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+                        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                            local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+                            local hrp = char:WaitForChild("HumanoidRootPart")
+                            local distance = (player.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
+
+                            if distance < shortestDistance then
+                                shortestDistance = distance
+                                closestPlayer = player
+                            end
+                        end
+                    end
+
+                    if closestPlayer then
+                        local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+                        local hrp = char:WaitForChild("HumanoidRootPart")
+                        local targetHRP = closestPlayer.Character:WaitForChild("HumanoidRootPart")
+
+                        hrp.CFrame = targetHRP.CFrame + Vector3.new(0, 0, 0)
+
+                        local knife = game.Players.LocalPlayer.Backpack:FindFirstChild("Knife") or char:FindFirstChild("Knife")
+                        if knife then
+                            knife:WaitForChild("Stab"):FireServer("Down")
+                        end
+                    end
+
+                    task.wait(0)
+                end
+            end)
+        end
+    end
+})
+
+-- Movement Tab
+MovementTab:Section({Title = "Movement Controls"})
+
+-- Walkspeed Slider
+MovementTab:Slider({
+    Title = "Walkspeed",
+    Desc = "Adjust your player's walkspeed",
+    Min = 0,
+    Max = 100,
+    Value = 16,
+    Callback = function(value)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = value
+        end
+    end
+})
+
+-- Jump Power Slider
+MovementTab:Slider({
+    Title = "Jump Power",
+    Desc = "Adjust your player's jump power",
+    Min = 0,
+    Max = 200,
+    Value = 50,
+    Callback = function(value)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").JumpPower = value
+        end
+    end
+})
+
+local defaultGravity = workspace.Gravity
+
+-- Gravity Slider
+MovementTab:Slider({
+    Title = "Gravity",
+    Desc = "Adjust the game gravity",
+    Min = 0,
+    Max = 999,
+    Value = workspace.Gravity,
+    Callback = function(value)
+        workspace.Gravity = value
+    end
+})
+
+-- FOV Slider
+MovementTab:Slider({
+    Title = "Field of View",
+    Desc = "Adjust the camera's field of view",
+    Min = 20,
+    Max = 120,
+    Value = Camera.FieldOfView,
+    Callback = function(value)
+        Camera.FieldOfView = value
+    end
+})
+
+-- Infinite Jump Toggle
+local InfJumpEnabled = false
+local InfJumpConnection
+
+MovementTab:Toggle({
+    Title = "Infinite Jump",
+    Desc = "Enable infinite jump",
+    Value = false,
+    Callback = function(state)
+        InfJumpEnabled = state
+        if InfJumpEnabled then
+            InfJumpConnection = UserInputService.JumpRequest:Connect(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+        else
+            if InfJumpConnection then
+                InfJumpConnection:Disconnect()
+            end
+        end
+    end
+})
+
+-- Noclip Toggle
+local NoclipEnabled = false
+
+MovementTab:Toggle({
+    Title = "Noclip",
+    Desc = "Enable noclip (walk through walls)",
+    Value = false,
+    Callback = function(state)
+        NoclipEnabled = state
+    end
+})
+
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Fly Toggle
+local FlyEnabled = false
+local FlyBodyVelocity, FlyBodyGyro
+local FlyConnection
+local FlySpeed = 50
+
+MovementTab:Toggle({
+    Title = "Fly",
+    Desc = "Enable flying mode",
+    Value = false,
+    Callback = function(state)
+        FlyEnabled = state
+        local character = LocalPlayer.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+
+        if FlyEnabled then
+            FlyBodyVelocity = Instance.new("BodyVelocity")
+            FlyBodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            FlyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            FlyBodyVelocity.Parent = hrp
+
+            FlyBodyGyro = Instance.new("BodyGyro")
+            FlyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+            FlyBodyGyro.CFrame = hrp.CFrame
+            FlyBodyGyro.Parent = hrp
+
+            FlyConnection = RunService.RenderStepped:Connect(function()
+                local direction = Vector3.new()
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                    direction = direction + (Camera.CFrame.LookVector)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                    direction = direction - (Camera.CFrame.LookVector)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                    direction = direction - (Camera.CFrame.RightVector)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                    direction = direction + (Camera.CFrame.RightVector)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.E) then
+                    direction = direction + Vector3.new(0, 1, 0)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Q) then
+                    direction = direction - Vector3.new(0, 1, 0)
+                end
+
+                FlyBodyVelocity.Velocity = direction * FlySpeed
+                if direction.Magnitude > 0 then
+                    FlyBodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + direction)
+                else
+                    FlyBodyGyro.CFrame = hrp.CFrame
+                end
+            end)
+        else
+            if FlyConnection then
+                FlyConnection:Disconnect()
+            end
+            if FlyBodyVelocity then
+                FlyBodyVelocity:Destroy()
+            end
+            if FlyBodyGyro then
+                FlyBodyGyro:Destroy()
+            end
+        end
+    end
+})
+
+-- Fly Speed Slider
+MovementTab:Slider({
+    Title = "Fly Speed",
+    Desc = "Adjust your fly speed",
+    Min = 10,
+    Max = 999,
+    Value = 50,
+    Callback = function(value)
+        FlySpeed = value
+    end
+})
+
+-- Restore Defaults Button
+MovementTab:Button({
+    Title = "Restore Defaults",
+    Desc = "Reset to default values",
+    Callback = function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").JumpPower = 50
+            workspace.Gravity = defaultGravity
+        end
+        Window:Notify({
+            Title = "Restored",
+            Desc = "All values reset to defaults",
+            Time = 3
+        })
+    end
+})
+
+-- Settings Tab
+SettingsTab:Section({Title = "Utilities"})
+
+-- Rejoin Button
+SettingsTab:Button({
+    Title = "Rejoin",
+    Desc = "Rejoin the current server",
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end
+})
+
+-- Serverhop Button
+SettingsTab:Button({
+    Title = "Serverhop",
+    Desc = "Join a different server",
+    Callback = function()
+        local function serverhop()
+            local function tryHttpRequest(url)
+                if syn and syn.request then
+                    local response = syn.request({
+                        Url = url,
+                        Method = "GET"
+                    })
+                    return true, HttpService:JSONDecode(response.Body)
+                end
+                if request then
+                    local response = request({
+                        Url = url,
+                        Method = "GET"
+                    })
+                    return true, HttpService:JSONDecode(response.Body)
+                end
+                if http and http.request then
+                    local response = http.request({
+                        Url = url,
+                        Method = "GET"
+                    })
+                    return true, HttpService:JSONDecode(response.Body)
+                end
+                local success, response = pcall(function()
+                    return HttpService:JSONDecode(game:HttpGet(url))
+                end)
+                if success then
+                    return true, response
+                end
+                return false, nil
+            end
+
+            local url = string.format("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true", game.PlaceId)
+            local success, response = tryHttpRequest(url)
+
+            if not success or not response or not response.data then
+                Window:Notify({
+                    Title = "Serverhop",
+                    Desc = "Failed to fetch server list",
+                    Time = 5
+                })
+                return
+            end
+
+            local servers = {}
+            for _, v in ipairs(response.data) do
+                if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    table.insert(servers, v.id)
+                end
+            end
+
+            if #servers > 0 then
+                Window:Notify({
+                    Title = "Serverhop",
+                    Desc = "Joining a new server...",
+                    Time = 3
+                })
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], Players.LocalPlayer)
+            else
+                Window:Notify({
+                    Title = "Serverhop",
+                    Desc = "Couldn't find available server",
+                    Time = 5
+                })
+            end
+        end
+
+        local success, err = pcall(serverhop)
+        if not success then
+            Window:Notify({
+                Title = "Serverhop Error",
+                Desc = "An error occurred: " .. tostring(err),
+                Time = 5
+            })
+        end
+    end
+})
+
+-- KeyBind Events
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    -- TP to Gun - Key "X"
+    if input.KeyCode == Enum.KeyCode.X then
+        local gun = nil
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v.Name == "GunDrop" and v:IsA("BasePart") then
+                gun = v
+                break
+            end
+        end
+
+        if gun then
+            local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+            local hrp = char:WaitForChild("HumanoidRootPart")
+            hrp.CFrame = gun.CFrame + Vector3.new(0, 5, 0)
+            Window:Notify({
+                Title = "Gun Found",
+                Desc = "Teleported to the Gun!",
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Gun Not Found",
+                Desc = "No GunDrop found in the map!",
+                Time = 3
+            })
+        end
+    end
+
+    -- Shoot Murder - Key "Z"
+    if input.KeyCode == Enum.KeyCode.Z then
+        local murder = nil
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+                local hasKnife = false
+
+                if player:FindFirstChild("Backpack") and player.Backpack:FindFirstChild("Knife") then
+                    hasKnife = true
+                end
+
+                if player.Character and player.Character:FindFirstChild("Knife") then
+                    hasKnife = true
+                end
+
+                if hasKnife then
+                    murder = player
+                    break
+                end
+            end
+        end
+
+        if murder and murder.Character and murder.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = murder.Character.HumanoidRootPart
+            local murderPos = hrp.Position
+
+            local velocity = hrp.Velocity
+
+            local pingMs = 0
+            local stats = game:GetService("Stats")
+            if stats:FindFirstChild("Network") and stats.Network:FindFirstChild("ServerStatsItem") then
+                local pingStat = stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+                if pingStat then
+                    pingMs = pingStat:GetValue()
+                end
+            end
+            local pingSec = math.clamp(pingMs / 1000, 0, 1)
+
+            local leadOffset = velocity * pingSec
+
+            if velocity.Magnitude < 2 then
+                leadOffset = Vector3.new(0, 0, 0)
+            end
+
+            local targetPos = murderPos + leadOffset
+
+            local args = {
+                1,
+                Vector3.new(targetPos.X, targetPos.Y, targetPos.Z),
+                "AH2"
+            }
+
+            game:GetService("Players").LocalPlayer.Character:WaitForChild("Gun"):WaitForChild("KnifeLocal"):WaitForChild("CreateBeam"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+
+            Window:Notify({
+                Title = "Shot Fired",
+                Desc = "Fired ahead of " .. murder.Name,
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "No player holding Knife found!",
+                Time = 3
+            })
+        end
+    end
+end)
+
+-- Player Events
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function(character)
+        wait(0.5)
+        if murdererESPEnabled or sheriffESPEnabled or innocentESPEnabled then
+            updateESPForPlayer(player)
+        end
+    end)
+end)
+
+-- Initial notification
+Window:Notify({
+    Title = "MM2 Hub Loaded",
+    Desc = "Script loaded successfully! Press LeftControl to toggle.",
+    Time = 5
+})
+
+print("Murder Mystery 2 Hub loaded with DummyUI")

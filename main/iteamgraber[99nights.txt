@@ -1,1 +1,521 @@
-404: Not Found
+  -- Load DummyUI Library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zzxzsss/zxs/refs/heads/main/ui/dummyui"))()
+
+--// ============== SETTINGS ============== \\--
+
+-- Target items with desired quantities and CATEGORY
+local targetItems = {
+    ["Log"] = {quantity = 10, category = "Material"},
+    ["Coal"] = {quantity = 15, category = "Material"},
+    ["Fuel"] = {quantity = 5, category = "Consumable"},
+    ["Berry"] = {quantity = 15, category = "Food"},
+    ["Alien Chest"] = {quantity = 2, category = "Container"},
+    ["Bolt"] = {quantity = 20, category = "Material"},
+    ["Coin Stack"] = {quantity = -1, category = "Currency"},
+    ["Fuel Canister"] = {quantity = 8, category = "Consumable"},
+    ["Item Chest"] = {quantity = 3, category = "Container"},
+    ["Laser Fence Blueprint"] = {quantity = 1, category = "Blueprint"},
+    ["Old Flashlight"] = {quantity = 2, category = "Tool"},
+    ["Old Radio"] = {quantity = 1, category = "Tool"},
+    ["Revolver Ammo"] = {quantity = 50, category = "Ammo"},
+    ["Rifle Ammo"] = {quantity = 100, category = "Ammo"},
+    ["Sheet Metal"] = {quantity = 25, category = "Material"},
+    ["UFO Component"] = {quantity = 5, category = "Component"},
+    ["UFO Scrap"] = {quantity = 15, category = "Component"},
+    ["Old Car Engine"] = {quantity = 1, category = "Vehicle Part"},
+    ["Rifle"] = {quantity = 1, category = "Weapon"},
+    ["Seed Box"] = {quantity = 5, category = "Farming"},
+    ["Steak"] = {quantity = 10, category = "Food"},
+    ["Strong Flashlight"] = {quantity = 1, category = "Tool"},
+    ["Stronghold Diamond Chest"] = {quantity = 1, category = "Container"},
+    ["Tyre"] = {quantity = 4, category = "Vehicle Part"},
+    ["Washing Machine"] = {quantity = 1, category = "Furniture"},
+    ["Wolf Corpse"] = {quantity = 3, category = "Resource"},
+    ["Wolf Pelt"] = {quantity = 5, category = "Resource"},
+    ["Alpha Wolf Corpse"] = {quantity = 1, category = "Resource"},
+    ["Anvil Back"] = {quantity = 1, category = "Crafting"},
+    ["Anvil Base"] = {quantity = 1, category = "Crafting"},
+    ["Anvil Front"] = {quantity = 1, category = "Crafting"},
+    ["Apple"] = {quantity = 10, category = "Food"},
+    ["Bandage"] = {quantity = 5, category = "Medical"},
+    ["Broken Microwave"] = {quantity = 1, category = "Furniture"},
+    ["Cake"] = {quantity = 1, category = "Food"},
+    ["Chair"] = {quantity = 2, category = "Furniture"},
+    ["Leather Body"] = {quantity = 1, category = "Armor"},
+    ["Medkit"] = {quantity = 3, category = "Medical"},
+    ["Morsel"] = {quantity = 10, category = "Food"},
+    ["Notice"] = {quantity = 1, category = "Miscellaneous"},
+    ["Oil Barrel"] = {quantity = 2, category = "Container"},
+}
+
+-- Add Item Chest1 to Item Chest20 with a "Container" category
+for i = 1, 20 do
+    targetItems["Item Chest" .. i] = {quantity = 1, category = "Container"}
+end
+
+-- Define categories for easy iteration and UI creation
+local categories = {"All", "Food", "Material", "Container", "Tool", "Weapon", "Consumable", "Currency", "Blueprint", "Ammo", "Component", "Vehicle Part", "Farming", "Resource", "Crafting", "Medical", "Furniture", "Armor", "Miscellaneous"}
+
+-- How often the script can be run (in seconds)
+local COOLDOWN = 2
+
+--// ====================================== \\--
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Player = Players.LocalPlayer
+
+-- Variables
+local canGrab = true
+local canScan = true
+local canDiscover = true
+local collectedItems = {}
+local availableItems = {}
+local discoveredItems = {}
+local currentCategory = "All"
+
+-- Create Main Window
+local Window = Library:Window({
+    Title = "99 Nights - Item Grabber",
+    Desc = "Collect nearby items automatically",
+    Icon = 105059922903197,
+    Theme = "Dark",
+    Config = {
+        Keybind = Enum.KeyCode.LeftControl,
+        Size = UDim2.new(0, 500, 0, 400)
+    },
+    CloseUIButton = {
+        Enabled = true,
+        Text = "zzz hub"
+    }
+})
+
+-- Create Tabs
+local MainTab = Window:Tab({Title = "Main", Icon = "package"}) do
+    MainTab:Section({Title = "Item Controls"})
+
+    -- Scan Button
+    MainTab:Button({
+        Title = "🔍 Scan Workspace",
+        Desc = "Scan for available target items",
+        Callback = function()
+            scanWorkspaceItems()
+            Window:Notify({
+                Title = "Scan Complete",
+                Desc = "Workspace scanned for items!",
+                Time = 3
+            })
+        end
+    })
+
+    -- Discover Button
+    MainTab:Button({
+        Title = "🆕 Discover New Items",
+        Desc = "Find new items not in target list",
+        Callback = function()
+            discoverNewItems()
+            Window:Notify({
+                Title = "Discovery",
+                Desc = "Searching for new items...",
+                Time = 3
+            })
+        end
+    })
+
+    -- Grab All Button
+    MainTab:Button({
+        Title = "📦 Grab All Items",
+        Desc = "Collect all target items to player",
+        Callback = function()
+            if canGrab then
+                bringItemsToPlayer()
+                Window:Notify({
+                    Title = "Item Collection",
+                    Desc = "Collecting all target items!",
+                    Time = 3
+                })
+            else
+                Window:Notify({
+                    Title = "Cooldown",
+                    Desc = "Please wait before grabbing again",
+                    Time = 2
+                })
+            end
+        end
+    })
+
+    MainTab:Section({Title = "Category Filter"})
+
+    -- Category Dropdown
+    local categoryDropdown = MainTab:Dropdown({
+        Title = "Item Category",
+        List = categories,
+        Value = "All",
+        Callback = function(value)
+            currentCategory = value
+            updateItemDisplay()
+        end
+    })
+
+    MainTab:Section({Title = "Status Information"})
+
+    -- Status Display
+    local statusCode = MainTab:Code({
+        Title = "Current Status",
+        Code = "Ready to scan for items"
+    })
+
+    -- Function to update status
+    function updateStatus(message)
+        statusCode:SetCode(message)
+    end
+end
+
+local ItemsTab = Window:Tab({Title = "Items", Icon = "list"}) do
+    ItemsTab:Section({Title = "Available Items"})
+
+    -- This will be populated with individual item buttons
+    local itemButtonsContainer = {}
+
+    -- Function to create item buttons
+    function createItemButtons()
+        -- Clear existing buttons (we'll recreate them each time)
+        for _, button in pairs(itemButtonsContainer) do
+            if button.Destroy then
+                button:Destroy()
+            end
+        end
+        itemButtonsContainer = {}
+
+        local itemCount = 0
+        for itemName, itemData in pairs(targetItems) do
+            if currentCategory == "All" or itemData.category == currentCategory then
+                local foundCount = availableItems[itemName] or 0
+                local targetCount = itemData.quantity
+                local displayText = itemName .. " (" .. foundCount .. "/" .. (targetCount == -1 and "∞" or targetCount) .. ")"
+
+                if itemCount < 20 then -- Limit to prevent UI overflow
+                    local itemButton = ItemsTab:Button({
+                        Title = displayText,
+                        Desc = "Category: " .. itemData.category,
+                        Callback = function()
+                            if foundCount > 0 then
+                                bringSpecificItem(itemName)
+                                Window:Notify({
+                                    Title = "Item Collection",
+                                    Desc = "Collecting " .. itemName .. "...",
+                                    Time = 2
+                                })
+                            else
+                                Window:Notify({
+                                    Title = "No Items",
+                                    Desc = itemName .. " not found in workspace",
+                                    Time = 2
+                                })
+                            end
+                        end
+                    })
+                    table.insert(itemButtonsContainer, itemButton)
+                    itemCount = itemCount + 1
+                end
+            end
+        end
+
+        if itemCount == 0 then
+            ItemsTab:Code({
+                Title = "No Items",
+                Code = "No items found in the selected category.\nTry scanning the workspace first."
+            })
+        end
+    end
+end
+
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"}) do
+    SettingsTab:Section({Title = "Collection Settings"})
+
+    SettingsTab:Code({
+        Title = "Current Targets",
+        Code = "Tracking " .. #targetItems .. " different item types\nCategories: " .. #categories .. " available\nCooldown: " .. COOLDOWN .. " seconds"
+    })
+
+    SettingsTab:Section({Title = "Information"})
+
+    SettingsTab:Code({
+        Title = "Instructions",
+        Code = "1. Click 'Scan Workspace' to find items\n2. Use category filter to narrow results\n3. Click individual items or 'Grab All'\n4. Use 'Discover' to find new items"
+    })
+end
+
+-- ============== CORE FUNCTIONS ==============
+
+-- Function to discover new items in workspace
+function discoverNewItems()
+    if not canDiscover then return end
+    canDiscover = false
+
+    discoveredItems = {}
+    local newItemsFound = 0
+
+    updateStatus("🔍 Discovering new items...")
+
+    -- Scan workspace for any items not in our target list
+    for _, item in pairs(workspace:GetDescendants()) do
+        if item:IsA("BasePart") or item:IsA("Model") then
+            local itemName = item.Name
+            -- Skip if it's already in our target list or if it's a common non-item object
+            if not targetItems[itemName] and not discoveredItems[itemName] then
+                -- Filter out common game objects that aren't items
+                local skipNames = {
+                    "Baseplate", "SpawnLocation", "Camera", "Lighting", "Terrain",
+                    "StarterGui", "StarterPack", "StarterPlayer", "ReplicatedStorage",
+                    "ServerStorage", "Teams", "Workspace", "Players", "Part", "Block",
+                    "Wedge", "CornerWedge", "Cylinder", "Ball", "Seat", "VehicleSeat",
+                    "TrussPart", "WedgePart", "CornerWedgePart", "Model", "Folder",
+                    "Configuration", "IntValue", "StringValue", "BoolValue", "NumberValue"
+                }
+
+                local shouldSkip = false
+                for _, skipName in pairs(skipNames) do
+                    if itemName == skipName or itemName:find("Part") or itemName:find("Block") then
+                        shouldSkip = true
+                        break
+                    end
+                end
+
+                if not shouldSkip and itemName ~= "" and #itemName > 1 then
+                    discoveredItems[itemName] = (discoveredItems[itemName] or 0) + 1
+                    newItemsFound = newItemsFound + 1
+                end
+            end
+        end
+    end
+
+    if newItemsFound > 0 then
+        updateStatus("🆕 Found " .. newItemsFound .. " new item types!")
+        -- Add discovered items to available items for display
+        for itemName, count in pairs(discoveredItems) do
+            if not targetItems[itemName] then -- Only add if truly new
+                targetItems[itemName] = {quantity = 1, category = "Miscellaneous"}
+            end
+            availableItems[itemName] = count
+        end
+        updateItemDisplay()
+    else
+        updateStatus("✅ No new items found.")
+    end
+
+    task.spawn(function()
+        task.wait(1)
+        canDiscover = true
+    end)
+end
+
+-- Function to bring specific item to player
+function bringSpecificItem(itemName)
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        updateStatus("❌ Character not found!")
+        return
+    end
+
+    local targetPosition = character.HumanoidRootPart.CFrame
+    local itemsFound = 0
+    local itemsMoved = 0
+    local itemData = targetItems[itemName] or {quantity = 1}
+    local targetCount = itemData.quantity
+    local collectedCount = 0
+
+    updateStatus("🎯 Collecting " .. itemName .. "...")
+
+    -- Search through workspace for specific item
+    for _, item in pairs(workspace:GetDescendants()) do
+        if item.Name == itemName then
+            -- Check if we need more of this item
+            if targetCount == -1 or collectedCount < targetCount then
+                itemsFound = itemsFound + 1
+                collectedCount = collectedCount + 1
+
+                local success = false
+
+                -- Handle different item types
+                if item:IsA("BasePart") then
+                    if item.Anchored then
+                        item.Anchored = false
+                    end
+                    item.CFrame = targetPosition * CFrame.new(math.random(-3, 3), 2, math.random(-3, 3))
+                    success = true
+                elseif item:IsA("Model") then
+                    local primaryPart = item.PrimaryPart or item:FindFirstChildOfClass("BasePart")
+                    if primaryPart then
+                        if primaryPart.Anchored then
+                            primaryPart.Anchored = false
+                        end
+                        if item.PrimaryPart then
+                            item:SetPrimaryPartCFrame(targetPosition * CFrame.new(math.random(-3, 3), 2, math.random(-3, 3)))
+                        else
+                            primaryPart.CFrame = targetPosition * CFrame.new(math.random(-3, 3), 2, math.random(-3, 3))
+                        end
+                        success = true
+                    end
+                end
+
+                if success then
+                    itemsMoved = itemsMoved + 1
+                end
+
+                -- Stop if we've collected enough (unless unlimited)
+                if targetCount ~= -1 and collectedCount >= targetCount then
+                    break
+                end
+            end
+        end
+    end
+
+    updateStatus("✅ " .. itemName .. ": " .. itemsMoved .. "/" .. itemsFound .. " collected")
+
+    -- Rescan to update counts after short delay
+    task.spawn(function()
+        task.wait(0.5)
+        scanWorkspaceItems()
+    end)
+end
+
+-- Function to update the item list display based on the current category
+function updateItemDisplay()
+    createItemButtons()
+end
+
+-- Function to scan workspace for items
+function scanWorkspaceItems()
+    if not canScan then return end
+    canScan = false
+
+    availableItems = {}
+    local totalItems = 0
+
+    updateStatus("🔍 Scanning workspace...")
+
+    -- Look in workspace and common item containers
+    local function scanContainer(container, containerName)
+        for _, item in pairs(container:GetDescendants()) do
+            if targetItems[item.Name] then
+                availableItems[item.Name] = (availableItems[item.Name] or 0) + 1
+                totalItems = totalItems + 1
+            end
+        end
+    end
+
+    -- Scan main workspace
+    scanContainer(workspace, "Workspace")
+
+    -- Scan common item container names
+    local itemContainers = workspace:FindFirstChild("Items") or workspace:FindFirstChild("ItemSpawns") or workspace:FindFirstChild("Collectibles")
+    if itemContainers then
+        scanContainer(itemContainers, "Items Container")
+    end
+
+    updateStatus("📊 Found " .. totalItems .. " target items")
+    updateItemDisplay()
+
+    task.spawn(function()
+        task.wait(1)
+        canScan = true
+    end)
+end
+
+-- Function to bring items to player
+function bringItemsToPlayer()
+    if not canGrab then return end
+    canGrab = false
+
+    local character = Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        updateStatus("❌ Character not found!")
+        canGrab = true
+        return
+    end
+
+    local targetPosition = character.HumanoidRootPart.CFrame
+    local itemsFound = 0
+    local itemsMoved = 0
+    local itemsCounted = {}
+
+    updateStatus("📦 Collecting items...")
+
+    -- Initialize counters
+    for itemName, _ in pairs(targetItems) do
+        itemsCounted[itemName] = 0
+    end
+
+    -- Search through workspace
+    for _, item in pairs(workspace:GetDescendants()) do
+        if targetItems[item.Name] then
+            local itemName = item.Name
+            local targetCount = targetItems[itemName].quantity
+
+            -- Check if we need more of this item
+            if targetCount == -1 or itemsCounted[itemName] < targetCount then
+                itemsFound = itemsFound + 1
+                itemsCounted[itemName] = itemsCounted[itemName] + 1
+
+                local success = false
+
+                -- Handle different item types
+                if item:IsA("BasePart") then
+                    if item.Anchored then
+                        item.Anchored = false
+                    end
+                    item.CFrame = targetPosition * CFrame.new(math.random(-5, 5), 2, math.random(-5, 5))
+                    success = true
+                elseif item:IsA("Model") then
+                    local primaryPart = item.PrimaryPart or item:FindFirstChildOfClass("BasePart")
+                    if primaryPart then
+                        if primaryPart.Anchored then
+                            primaryPart.Anchored = false
+                        end
+                        if item.PrimaryPart then
+                            item:SetPrimaryPartCFrame(targetPosition * CFrame.new(math.random(-5, 5), 2, math.random(-5, 5)))
+                        else
+                            primaryPart.CFrame = targetPosition * CFrame.new(math.random(-5, 5), 2, math.random(-5, 5))
+                        end
+                        success = true
+                    end
+                end
+
+                if success then
+                    itemsMoved = itemsMoved + 1
+                end
+            end
+        end
+    end
+
+    updateStatus("🎉 Moved " .. itemsMoved .. "/" .. itemsFound .. " items!")
+
+    -- Reset after cooldown
+    task.spawn(function()
+        task.wait(COOLDOWN)
+        canGrab = true
+        -- Rescan to update counts
+        scanWorkspaceItems()
+    end)
+end
+
+-- Initial scan after a brief delay to ensure everything is loaded
+task.spawn(function()
+    task.wait(1)
+    scanWorkspaceItems()
+end)
+
+-- Final Notification
+Window:Notify({
+    Title = "99 Nights Item Grabber",
+    Desc = "Script loaded successfully with DummyUI!",
+    Time = 4
+})
+
+print("99 Nights Item Grabber loaded successfully with DummyUI!")
+print("📋 Targeting " .. #targetItems .. " different item types")
+print("🔍 Use scan button to find items")
+print("📦 Use grab button to collect items")
+print("👆 Click individual items to collect them")

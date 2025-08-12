@@ -1,0 +1,358 @@
+ 
+-- Game ID Fetcher with Modern UI
+-- Get and copy Place IDs, Universe IDs, and Job IDs
+
+-- Load Modern UI Library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/zzxzsss/zxs/refs/heads/main/ui/dummyui"))()
+
+-- Services
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+
+-- Variables
+local player = Players.LocalPlayer
+local currentPlaceId = game.PlaceId
+local currentJobId = game.JobId
+local gameInfo = nil
+
+-- Get game information
+local function getGameInfo()
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(currentPlaceId)
+    end)
+    
+    if success then
+        gameInfo = info
+        return info
+    else
+        gameInfo = {
+            Name = "Unknown Game",
+            Creator = {Name = "Unknown Creator"},
+            Description = "Could not fetch game info"
+        }
+        return gameInfo
+    end
+end
+
+-- Initialize game info
+getGameInfo()
+
+-- Create Main Window
+local Window = Library:Window({
+    Title = "Game ID Fetcher",
+    Desc = "Get and copy Roblox game IDs",
+    Icon = 105059922903197,
+    Theme = "Dark",
+    Config = {
+        Keybind = Enum.KeyCode.RightControl,
+        Size = UDim2.new(0, 500, 0, 450)
+    },
+    CloseUIButton = {
+        Enabled = true,
+        Text = "Game ID Fetcher"
+    }
+})
+
+-- Current Game Tab
+local CurrentTab = Window:Tab({Title = "Current Game", Icon = "gamepad-2"})
+
+-- Game Info Section
+CurrentTab:Section({Title = "Game Information"})
+
+CurrentTab:Button({
+    Title = "📋 Copy Place ID: " .. tostring(currentPlaceId),
+    Desc = "Current game's Place ID - " .. (gameInfo.Name or "Loading..."),
+    Callback = function()
+        if setclipboard then
+            setclipboard(tostring(currentPlaceId))
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "Place ID copied to clipboard: " .. currentPlaceId,
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Clipboard not supported on this executor",
+                Time = 3
+            })
+        end
+    end
+})
+
+CurrentTab:Button({
+    Title = "🌐 Copy Job ID",
+    Desc = "Current server's Job ID for rejoining",
+    Callback = function()
+        if setclipboard then
+            setclipboard(tostring(currentJobId))
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "Job ID copied to clipboard",
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Clipboard not supported on this executor",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Get Universe ID
+local function getUniverseId()
+    local success, universeId = pcall(function()
+        local apiUrl = "https://apis.roblox.com/universes/v1/places/" .. currentPlaceId .. "/universe"
+        return HttpService:JSONDecode(game:HttpGet(apiUrl)).universeId
+    end)
+    
+    if success then
+        return universeId
+    else
+        return "Could not fetch"
+    end
+end
+
+CurrentTab:Button({
+    Title = "🌌 Copy Universe ID",
+    Desc = "Get the Universe ID for this game",
+    Callback = function()
+        local universeId = getUniverseId()
+        if universeId ~= "Could not fetch" and setclipboard then
+            setclipboard(tostring(universeId))
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "Universe ID copied: " .. universeId,
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Could not fetch Universe ID",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Game Details Display
+CurrentTab:Section({Title = "Game Details"})
+
+if gameInfo then
+    CurrentTab:Button({
+        Title = "🎮 " .. (gameInfo.Name or "Unknown Game"),
+        Desc = "👤 " .. (gameInfo.Creator and gameInfo.Creator.Name or "Unknown Creator"),
+        Callback = function()
+            Window:Notify({
+                Title = "Game Info",
+                Desc = gameInfo.Name .. " by " .. (gameInfo.Creator and gameInfo.Creator.Name or "Unknown"),
+                Time = 4
+            })
+        end
+    })
+end
+
+-- Tools Tab
+local ToolsTab = Window:Tab({Title = "Tools", Icon = "wrench"})
+
+ToolsTab:Section({Title = "ID Tools"})
+
+-- Custom Place ID Input
+local customPlaceId = ""
+ToolsTab:Textbox({
+    Title = "Custom Place ID",
+    Desc = "Enter a Place ID to get info",
+    Placeholder = "Enter Place ID...",
+    Value = "",
+    ClearTextOnFocus = false,
+    Callback = function(text)
+        customPlaceId = text
+    end
+})
+
+ToolsTab:Button({
+    Title = "🔍 Get Custom Game Info",
+    Desc = "Fetch information for entered Place ID",
+    Callback = function()
+        if customPlaceId and customPlaceId ~= "" then
+            local placeIdNum = tonumber(customPlaceId)
+            if placeIdNum then
+                local success, customInfo = pcall(function()
+                    return MarketplaceService:GetProductInfo(placeIdNum)
+                end)
+                
+                if success then
+                    Window:Notify({
+                        Title = "Custom Game Info",
+                        Desc = customInfo.Name .. " by " .. (customInfo.Creator and customInfo.Creator.Name or "Unknown"),
+                        Time = 5
+                    })
+                    
+                    if setclipboard then
+                        setclipboard(tostring(placeIdNum))
+                    end
+                else
+                    Window:Notify({
+                        Title = "Error",
+                        Desc = "Could not fetch info for Place ID: " .. customPlaceId,
+                        Time = 3
+                    })
+                end
+            else
+                Window:Notify({
+                    Title = "Error",
+                    Desc = "Invalid Place ID format",
+                    Time = 3
+                })
+            end
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Please enter a Place ID",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Player Info Tab
+local PlayerTab = Window:Tab({Title = "Player Info", Icon = "user"})
+
+PlayerTab:Section({Title = "Current Player"})
+
+PlayerTab:Button({
+    Title = "👤 Copy User ID: " .. player.UserId,
+    Desc = "Your Roblox User ID: " .. player.Name,
+    Callback = function()
+        if setclipboard then
+            setclipboard(tostring(player.UserId))
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "User ID copied: " .. player.UserId,
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Clipboard not supported",
+                Time = 3
+            })
+        end
+    end
+})
+
+PlayerTab:Button({
+    Title = "📝 Copy Username: " .. player.Name,
+    Desc = "Your Roblox username",
+    Callback = function()
+        if setclipboard then
+            setclipboard(player.Name)
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "Username copied: " .. player.Name,
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Clipboard not supported",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Server Info
+PlayerTab:Section({Title = "Server Information"})
+
+PlayerTab:Button({
+    Title = "👥 Server Players: " .. #Players:GetPlayers(),
+    Desc = "Current players in this server",
+    Callback = function()
+        local playerList = {}
+        for _, p in pairs(Players:GetPlayers()) do
+            table.insert(playerList, p.Name)
+        end
+        
+        if setclipboard then
+            setclipboard(table.concat(playerList, ", "))
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "Player list copied to clipboard",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Settings Tab
+local SettingsTab = Window:Tab({Title = "Settings", Icon = "settings"})
+
+SettingsTab:Section({Title = "Information"})
+
+SettingsTab:Button({
+    Title = "Game ID Fetcher",
+    Desc = "Made for easy ID collection and copying",
+    Callback = function()
+        Window:Notify({
+            Title = "About",
+            Desc = "Game ID Fetcher - Get Place IDs, Job IDs, and more!",
+            Time = 4
+        })
+    end
+})
+
+SettingsTab:Section({Title = "Quick Actions"})
+
+SettingsTab:Button({
+    Title = "📋 Copy All IDs",
+    Desc = "Copy all current game IDs at once",
+    Callback = function()
+        local allIds = string.format(
+            "Place ID: %s\nJob ID: %s\nUser ID: %s\nGame: %s",
+            currentPlaceId,
+            currentJobId,
+            player.UserId,
+            gameInfo.Name or "Unknown"
+        )
+        
+        if setclipboard then
+            setclipboard(allIds)
+            Window:Notify({
+                Title = "Copied!",
+                Desc = "All IDs copied to clipboard",
+                Time = 3
+            })
+        else
+            Window:Notify({
+                Title = "Error",
+                Desc = "Clipboard not supported",
+                Time = 3
+            })
+        end
+    end
+})
+
+SettingsTab:Button({
+    Title = "🔄 Refresh Game Info",
+    Desc = "Update current game information",
+    Callback = function()
+        getGameInfo()
+        Window:Notify({
+            Title = "Refreshed",
+            Desc = "Game information updated",
+            Time = 3
+        })
+    end
+})
+
+-- Final notification
+Window:Notify({
+    Title = "Game ID Fetcher",
+    Desc = "Ready to fetch and copy game IDs! Press Right Control to toggle.",
+    Time = 4
+})

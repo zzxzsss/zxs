@@ -1,4 +1,4 @@
- 
+
 -- Universal Hub Chooser - Simple UI Edition
 -- Clean and modern design based on key system interface
 
@@ -294,8 +294,8 @@ local GAMES = {
         name = "99 Nights in the Forest",
         emoji = "🌲",
         scripts = {
-            {name = "Lot Features - 99 Nights", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/main/Lot%20Features%20-%2099%20Nights.txt", color = Color3.fromRGB(34, 139, 34)},
-            {name = "Item Grabber", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/main/iteamgraber[99nights.txt", color = Color3.fromRGB(46, 125, 50)}
+            {name = "zzz hub the best v2", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/main/Lot%20Features%20-%2099%20Nights.txt", color = Color3.fromRGB(34, 139, 34)},
+            {name = "Item Grabber asss", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/main/iteamgraber[99nights.txt", color = Color3.fromRGB(46, 125, 50)}
         }
     },
     

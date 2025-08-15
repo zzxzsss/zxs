@@ -1,9 +1,83 @@
+ 
+-- Universal Hub Chooser - Simple UI Edition
+-- Clean and modern design based on key system interface
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 -- Game configurations
 local GAMES = {
+    
+    -- Build a Plane
+    {
+        placeIds = {137925884276740},
+        name = "Build a Plane",
+        emoji = "✈️",
+        scripts = {
+            {name = "ZZZ Hub - Build a Plane", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/BuildaPlane.lua", color = Color3.fromRGB(135, 206, 250)}
+        }
+    },
+    
+    -- Build an Island
+    {
+        placeIds = {101949297449238},
+        name = "Build an Island",
+        emoji = "🏝️",
+        scripts = {
+            {name = "ZZZ Hub - Build an Island", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/BuildanIsland.lua", color = Color3.fromRGB(34, 139, 34)}
+        }
+    },
+    
+    -- Geometry Jump
+    {
+        placeIds = {10789933399},
+        name = "Geometry Jump",
+        emoji = "🔺",
+        scripts = {
+            {name = "ZZZ Hub - Geometry Jump", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/GeometryJump.lua", color = Color3.fromRGB(255, 140, 0)}
+        }
+    },
+    
+    -- Go Fishing
+    {
+        placeIds = {116605585218149},
+        name = "Go Fishing",
+        emoji = "🎣",
+        scripts = {
+            {name = "ZZZ Hub - Go Fishing", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/GoFishing.lua", color = Color3.fromRGB(0, 191, 255)}
+        }
+    },
+    
+    -- Be NPC or Die
+    {
+        placeIds = {11276071411},
+        name = "Be NPC or Die",
+        emoji = "🤖",
+        scripts = {
+            {name = "ZZZ Hub - Be NPC or Die", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/beanpcordie.lua", color = Color3.fromRGB(255, 20, 147)}
+        }
+    },
+    
+    -- Meme Sea
+    {
+        placeIds = {10260193230},
+        name = "Meme Sea",
+        emoji = "🌊",
+        scripts = {
+            {name = "ZZZ Hub - Meme Sea", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/memesea.lua", color = Color3.fromRGB(75, 0, 130)}
+        }
+    },
+    
+    -- Doors
+    {
+        placeIds = {6516141723, 6839171747},
+        name = "Doors",
+        emoji = "🚪",
+        scripts = {
+            {name = "ZZZ Hub - Doors", url = "https://raw.githubusercontent.com/zzxzsss/zxs/main/update.2.2/doors.lua", color = Color3.fromRGB(139, 69, 19)}
+        }
+    },
     
     -- Steal a Brainrot
     {

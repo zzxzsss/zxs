@@ -1,4 +1,5 @@
-  if not game:IsLoaded() then
+--- nigger
+if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
@@ -502,7 +503,7 @@ local espDoorExit = TabHandles.TugWar:Toggle({
             end)
             return
         end
-        
+
         task.spawn(function()
             while _G.DoorExit do
                 pcall(function()
@@ -525,7 +526,7 @@ local espDoorExit = TabHandles.TugWar:Toggle({
                                                     Highlight.Adornee = a
                                                     Highlight.Parent = a.DoorRoot
                                                 end
-                                                
+
                                                 -- Add GUI ESP
                                                 if not a.DoorRoot:FindFirstChild("Esp_Gui") then
                                                     local BillboardGui = Instance.new("BillboardGui")
@@ -534,7 +535,7 @@ local espDoorExit = TabHandles.TugWar:Toggle({
                                                     BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
                                                     BillboardGui.AlwaysOnTop = true
                                                     BillboardGui.Parent = a.DoorRoot
-                                                    
+
                                                     local TextLabel = Instance.new("TextLabel")
                                                     TextLabel.Size = UDim2.new(1, 0, 1, 0)
                                                     TextLabel.BackgroundTransparency = 1
@@ -543,7 +544,7 @@ local espDoorExit = TabHandles.TugWar:Toggle({
                                                     TextLabel.TextScaled = true
                                                     TextLabel.Font = Enum.Font.SourceSansBold
                                                     TextLabel.Parent = BillboardGui
-                                                    
+
                                                     local UIStroke = Instance.new("UIStroke")
                                                     UIStroke.Color = Color3.new(0, 0, 0)
                                                     UIStroke.Thickness = 1.5
@@ -584,7 +585,7 @@ local espKeys = TabHandles.TugWar:Toggle({
             end)
             return
         end
-        
+
         task.spawn(function()
             while _G.EspKeys do
                 pcall(function()
@@ -601,7 +602,7 @@ local espKeys = TabHandles.TugWar:Toggle({
                                 Highlight.Adornee = a
                                 Highlight.Parent = a.Handle
                             end
-                            
+
                             if not a.Handle:FindFirstChild("Esp_Gui") then
                                 local BillboardGui = Instance.new("BillboardGui")
                                 BillboardGui.Name = "Esp_Gui"
@@ -609,7 +610,7 @@ local espKeys = TabHandles.TugWar:Toggle({
                                 BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
                                 BillboardGui.AlwaysOnTop = true
                                 BillboardGui.Parent = a.Handle
-                                
+
                                 local TextLabel = Instance.new("TextLabel")
                                 TextLabel.Size = UDim2.new(1, 0, 1, 0)
                                 TextLabel.BackgroundTransparency = 1
@@ -618,7 +619,7 @@ local espKeys = TabHandles.TugWar:Toggle({
                                 TextLabel.TextScaled = true
                                 TextLabel.Font = Enum.Font.SourceSansBold
                                 TextLabel.Parent = BillboardGui
-                                
+
                                 local UIStroke = Instance.new("UIStroke")
                                 UIStroke.Color = Color3.new(0, 0, 0)
                                 UIStroke.Thickness = 1.5
@@ -654,7 +655,7 @@ local espHiders = TabHandles.TugWar:Toggle({
             end)
             return
         end
-        
+
         task.spawn(function()
             while _G.EspHiders do
                 pcall(function()
@@ -672,7 +673,7 @@ local espHiders = TabHandles.TugWar:Toggle({
                                     Highlight.Adornee = v.Character
                                     Highlight.Parent = v.Character.Head
                                 end
-                                
+
                                 if not v.Character.Head:FindFirstChild("Esp_Gui") then
                                     local BillboardGui = Instance.new("BillboardGui")
                                     BillboardGui.Name = "Esp_Gui"
@@ -680,7 +681,7 @@ local espHiders = TabHandles.TugWar:Toggle({
                                     BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
                                     BillboardGui.AlwaysOnTop = true
                                     BillboardGui.Parent = v.Character.Head
-                                    
+
                                     local TextLabel = Instance.new("TextLabel")
                                     TextLabel.Size = UDim2.new(1, 0, 1, 0)
                                     TextLabel.BackgroundTransparency = 1
@@ -689,7 +690,7 @@ local espHiders = TabHandles.TugWar:Toggle({
                                     TextLabel.TextScaled = true
                                     TextLabel.Font = Enum.Font.SourceSansBold
                                     TextLabel.Parent = BillboardGui
-                                    
+
                                     local UIStroke = Instance.new("UIStroke")
                                     UIStroke.Color = Color3.new(0, 0, 0)
                                     UIStroke.Thickness = 1.5
@@ -748,7 +749,7 @@ TabHandles.TugWar:Button({
                 table.insert(hiders, v)
             end
         end
-        
+
         if #hiders > 0 then
             local randomHider = hiders[math.random(1, #hiders)]
             player.Character.HumanoidRootPart.CFrame = randomHider.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
@@ -765,7 +766,7 @@ TabHandles.TugWar:Button({
     Callback = function()
         local nearestDoor = nil
         local shortestDistance = math.huge
-        
+
         if workspace:FindFirstChild("HideAndSeekMap") then
             for _, v in pairs(workspace.HideAndSeekMap:GetChildren()) do
                 if v.Name == "NEWFIXEDDOORS" then
@@ -785,7 +786,7 @@ TabHandles.TugWar:Button({
                 end
             end
         end
-        
+
         if nearestDoor then
             player.Character.HumanoidRootPart.CFrame = nearestDoor.CFrame * CFrame.new(0, 0, -5)
             Notification("Teleported to nearest exit door!", 3)
@@ -824,7 +825,7 @@ local glassBridgeVision = TabHandles.GlassBridge:Toggle({
                                         j.PrimaryPart.Color = Color
                                         j.PrimaryPart.Transparency = 0
                                         j.PrimaryPart.Material = Enum.Material.Neon
-                                        
+
                                         if not j.PrimaryPart:FindFirstChild("SafetyLabel") then
                                             local BillboardGui = Instance.new("BillboardGui")
                                             BillboardGui.Name = "SafetyLabel"
@@ -832,7 +833,7 @@ local glassBridgeVision = TabHandles.GlassBridge:Toggle({
                                             BillboardGui.StudsOffset = Vector3.new(0, 2, 0)
                                             BillboardGui.AlwaysOnTop = true
                                             BillboardGui.Parent = j.PrimaryPart
-                                            
+
                                             local TextLabel = Instance.new("TextLabel")
                                             TextLabel.Size = UDim2.new(1, 0, 1, 0)
                                             TextLabel.BackgroundTransparency = 1
@@ -943,6 +944,173 @@ local autoJumpRope = TabHandles.JumpRope:Toggle({
     end
 })
 
+-- Mingle Tab
+TabHandles.Mingle:Paragraph({
+    Title = "Mingle Challenge",
+    Desc = "Auto-complete mingle mini-games",
+    Image = "heart",
+    ImageSize = 20,
+    Color = Color3.fromHex("#FF69B4"),
+})
+
+TabHandles.Mingle:Button({
+    Title = "Complete Mingle",
+    Icon = "zap",
+    Callback = function()
+        pcall(function()
+            for i, v in ipairs(player.Character:GetChildren()) do
+                if v.Name == "RemoteForQTE" then
+                    v:FireServer()
+                end
+            end
+        end)
+        Notification("Mingle completed!", 3)
+    end
+})
+
+local autoMingleToggle = TabHandles.Mingle:Toggle({
+    Title = "Auto Mingle",
+    Desc = "Automatically participate in mingle games",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoMingle = Value
+        task.spawn(function()
+            while _G.AutoMingle do
+                pcall(function()
+                    for i, v in ipairs(player.Character:GetChildren()) do
+                        if v.Name == "RemoteForQTE" then
+                            v:FireServer()
+                        end
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+-- Rebel Tab
+TabHandles.Rebel:Paragraph({
+    Title = "Rebel Features",
+    Desc = "Combat and rebel game features",
+    Image = "target",
+    ImageSize = 20,
+    Color = Color3.fromHex("#FF4444"),
+})
+
+TabHandles.Rebel:Button({
+    Title = "Equip Best Weapon",
+    Icon = "sword",
+    Callback = function()
+        pcall(function()
+            local bestWeapon = nil
+            local highestDamage = 0
+
+            for _, tool in pairs(player.Backpack:GetChildren()) do
+                if tool:IsA("Tool") and tool:FindFirstChild("Damage") then
+                    local damage = tool.Damage.Value
+                    if damage > highestDamage then
+                        highestDamage = damage
+                        bestWeapon = tool
+                    end
+                end
+            end
+
+            if bestWeapon then
+                player.Character.Humanoid:EquipTool(bestWeapon)
+                Notification("Equipped " .. bestWeapon.Name, 3)
+            else
+                Notification("No weapons found in backpack!", 3)
+            end
+        end)
+    end
+})
+
+local autoRebelToggle = TabHandles.Rebel:Toggle({
+    Title = "Auto Rebel",
+    Desc = "Automatically participate in rebel activities",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoRebel = Value
+        task.spawn(function()
+            while _G.AutoRebel do
+                pcall(function()
+                    -- Auto-click rebel remotes
+                    if ReplicatedStorage:FindFirstChild("Remotes") then
+                        local rebelRemote = ReplicatedStorage.Remotes:FindFirstChild("RebelRemote")
+                        if rebelRemote then
+                            rebelRemote:FireServer()
+                        end
+                    end
+
+                    -- Auto-activate rebel tools
+                    for _, tool in pairs(player.Character:GetChildren()) do
+                        if tool:IsA("Tool") and tool.Name:find("Rebel") then
+                            tool:Activate()
+                        end
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+TabHandles.Rebel:Button({
+    Title = "Kill All Players",
+    Icon = "skull",
+    Callback = function()
+        pcall(function()
+            for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+                if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    -- Teleport to player
+                    player.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
+                    wait(0.1)
+
+                    -- Use weapon
+                    for _, tool in pairs(player.Character:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            tool:Activate()
+                        end
+                    end
+
+                    wait(0.2)
+                end
+            end
+            Notification("Attack completed!", 3)
+        end)
+    end
+})
+
+local autoKillToggle = TabHandles.Rebel:Toggle({
+    Title = "Auto Kill Players",
+    Desc = "Automatically attack nearby players",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoKill = Value
+        task.spawn(function()
+            while _G.AutoKill do
+                pcall(function()
+                    for _, targetPlayer in pairs(game.Players:GetPlayers()) do
+                        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local distance = (player.Character.HumanoidRootPart.Position - targetPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if distance < 50 then -- Only attack if within 50 studs
+                                -- Use weapon
+                                for _, tool in pairs(player.Character:GetChildren()) do
+                                    if tool:IsA("Tool") then
+                                        tool:Activate()
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(0.5)
+            end
+        end)
+    end
+})
+
 -- Player Modifications Tab
 TabHandles.Player:Paragraph({
     Title = "Player Modifications",
@@ -1000,14 +1168,14 @@ local floatToggle = TabHandles.Player:Toggle({
     Value = false,
     Callback = function(Value) 
         _G.StartFloat = Value
-        
+
         if Value then
             task.spawn(function()
                 while _G.StartFloat and game.Players.LocalPlayer.Character do
                     local character = game.Players.LocalPlayer.Character
                     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                     local humanoid = character:FindFirstChild("Humanoid")
-                    
+
                     if humanoidRootPart and humanoid then
                         -- Create BodyPosition if it doesn't exist
                         local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
@@ -1019,43 +1187,43 @@ local floatToggle = TabHandles.Player:Toggle({
                             bodyPosition.D = 1000
                             bodyPosition.Parent = humanoidRootPart
                         end
-                        
+
                         -- Set the target position (current X and Z, but elevated Y)
                         local currentPos = humanoidRootPart.Position
                         local targetHeight = currentPos.Y
-                        
+
                         -- Raycast downward to find ground
                         local raycastParams = RaycastParams.new()
                         raycastParams.FilterDescendantsInstances = {character}
                         raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-                        
+
                         local raycastResult = workspace:Raycast(currentPos, Vector3.new(0, -1000, 0), raycastParams)
                         if raycastResult then
                             targetHeight = raycastResult.Position.Y + (_G.FloatHeight or 20)
                         end
-                        
+
                         bodyPosition.Position = Vector3.new(currentPos.X, targetHeight, currentPos.Z)
-                        
+
                         -- Disable fall damage
                         humanoid.PlatformStand = true
                     end
-                    
+
                     task.wait(0.1)
                 end
-                
+
                 -- Clean up when float is disabled
                 if game.Players.LocalPlayer.Character then
                     local character = game.Players.LocalPlayer.Character
                     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                     local humanoid = character:FindFirstChild("Humanoid")
-                    
+
                     if humanoidRootPart then
                         local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
                         if bodyPosition then
                             bodyPosition:Destroy()
                         end
                     end
-                    
+
                     if humanoid then
                         humanoid.PlatformStand = false
                     end
@@ -1067,14 +1235,14 @@ local floatToggle = TabHandles.Player:Toggle({
                 local character = game.Players.LocalPlayer.Character
                 local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                 local humanoid = character:FindFirstChild("Humanoid")
-                
+
                 if humanoidRootPart then
                     local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
                     if bodyPosition then
                         bodyPosition:Destroy()
                     end
                 end
-                
+
                 if humanoid then
                     humanoid.PlatformStand = false
                 end
@@ -1341,7 +1509,7 @@ local noCooldownProximity = TabHandles.Utils:Toggle({
                     v.HoldDuration = 0
                 end
             end
-            
+
             workspace.DescendantAdded:Connect(function(descendant)
                 if _G.NoCooldownProximity and descendant:IsA("ProximityPrompt") then
                     descendant.HoldDuration = 0

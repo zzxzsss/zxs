@@ -1,4 +1,4 @@
- if not game:IsLoaded() then
+  if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
@@ -350,14 +350,52 @@ TabHandles.Dalgona:Button({
     Title = "Complete Dalgona",
     Icon = "check-circle",
     Callback = function()
-        local DalgonaClientModule = game.ReplicatedStorage.Modules.Games.DalgonaClient
-        for i, v in pairs(getreg()) do
-            if typeof(v) == "function" and islclosure(v) then
-                if getinfo(v).nups == 73 then
-                    setupvalue(v, 31, 9e9)
+        pcall(function()
+            if ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Games") then
+                local DalgonaClientModule = ReplicatedStorage.Modules.Games:FindFirstChild("DalgonaClient")
+                if DalgonaClientModule then
+                    for i, v in pairs(getreg()) do
+                        if typeof(v) == "function" and islclosure(v) then
+                            if getfenv(v).script == DalgonaClientModule then
+                                if getinfo(v).nups == 73 then
+                                    setupvalue(v, 31, 9e9)
+                                end
+                            end
+                        end
+                    end
                 end
             end
-        end
+        end)
+    end
+})
+
+local autoDalgona = TabHandles.Dalgona:Toggle({
+    Title = "Auto Dalgona",
+    Desc = "Automatically complete dalgona challenges",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoDalgona = Value
+        task.spawn(function()
+            while _G.AutoDalgona do
+                pcall(function()
+                    if ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Games") then
+                        local DalgonaClientModule = ReplicatedStorage.Modules.Games:FindFirstChild("DalgonaClient")
+                        if DalgonaClientModule then
+                            for i, v in pairs(getreg()) do
+                                if typeof(v) == "function" and islclosure(v) then
+                                    if getfenv(v).script == DalgonaClientModule then
+                                        if getinfo(v).nups == 73 then
+                                            setupvalue(v, 31, 9e9)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(5)
+            end
+        end)
     end
 })
 
@@ -429,23 +467,30 @@ local autoMingle = TabHandles.TugWar:Toggle({
     end
 })
 
+-- Set ESP variables to true by default
+_G.EspHighlight = true
+_G.EspGui = true
+
 local espDoorExit = TabHandles.TugWar:Toggle({
     Title = "ESP Door Exit",
-    Desc = "Highlight door exits",
+    Desc = "Highlight door exits with green color",
     Value = false,
     Callback = function(Value) 
         _G.DoorExit = Value
-        if _G.DoorExit == false then
-            if workspace:FindFirstChild("HideAndSeekMap") then
-                for i, v in pairs(workspace:FindFirstChild("HideAndSeekMap"):GetChildren()) do
-                    if v.Name == "NEWFIXEDDOORS" then
-                        for k, m in pairs(v:GetChildren()) do
-                            if m.Name:find("Floor") and m:FindFirstChild("EXITDOORS") then
-                                for _, a in pairs(m:FindFirstChild("EXITDOORS"):GetChildren()) do
-                                    if a:IsA("Model") and a:FindFirstChild("DoorRoot") then
-                                        for _, z in pairs(a:FindFirstChild("DoorRoot"):GetChildren()) do
-                                            if z.Name:find("Esp_") then
-                                                z:Destroy()
+        if not Value then
+            -- Clean up existing ESP
+            pcall(function()
+                if workspace:FindFirstChild("HideAndSeekMap") then
+                    for _, v in pairs(workspace.HideAndSeekMap:GetChildren()) do
+                        if v.Name == "NEWFIXEDDOORS" then
+                            for _, m in pairs(v:GetChildren()) do
+                                if m.Name:find("Floor") and m:FindFirstChild("EXITDOORS") then
+                                    for _, a in pairs(m.EXITDOORS:GetChildren()) do
+                                        if a:IsA("Model") and a:FindFirstChild("DoorRoot") then
+                                            for _, z in pairs(a.DoorRoot:GetChildren()) do
+                                                if z.Name:find("Esp_") then
+                                                    z:Destroy()
+                                                end
                                             end
                                         end
                                     end
@@ -454,32 +499,284 @@ local espDoorExit = TabHandles.TugWar:Toggle({
                         end
                     end
                 end
+            end)
+            return
+        end
+        
+        task.spawn(function()
+            while _G.DoorExit do
+                pcall(function()
+                    -- ESP for Exit Doors
+                    if workspace:FindFirstChild("HideAndSeekMap") then
+                        for _, v in pairs(workspace.HideAndSeekMap:GetChildren()) do
+                            if v.Name == "NEWFIXEDDOORS" then
+                                for _, m in pairs(v:GetChildren()) do
+                                    if m.Name:find("Floor") and m:FindFirstChild("EXITDOORS") then
+                                        for _, a in pairs(m.EXITDOORS:GetChildren()) do
+                                            if a:IsA("Model") and a:FindFirstChild("DoorRoot") then
+                                                -- Add highlight
+                                                if not a.DoorRoot:FindFirstChild("Esp_Highlight") then
+                                                    local Highlight = Instance.new("Highlight")
+                                                    Highlight.Name = "Esp_Highlight"
+                                                    Highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                                                    Highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+                                                    Highlight.FillTransparency = 0.5
+                                                    Highlight.OutlineTransparency = 0
+                                                    Highlight.Adornee = a
+                                                    Highlight.Parent = a.DoorRoot
+                                                end
+                                                
+                                                -- Add GUI ESP
+                                                if not a.DoorRoot:FindFirstChild("Esp_Gui") then
+                                                    local BillboardGui = Instance.new("BillboardGui")
+                                                    BillboardGui.Name = "Esp_Gui"
+                                                    BillboardGui.Size = UDim2.new(0, 200, 0, 50)
+                                                    BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
+                                                    BillboardGui.AlwaysOnTop = true
+                                                    BillboardGui.Parent = a.DoorRoot
+                                                    
+                                                    local TextLabel = Instance.new("TextLabel")
+                                                    TextLabel.Size = UDim2.new(1, 0, 1, 0)
+                                                    TextLabel.BackgroundTransparency = 1
+                                                    TextLabel.Text = "EXIT DOOR"
+                                                    TextLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                                                    TextLabel.TextScaled = true
+                                                    TextLabel.Font = Enum.Font.SourceSansBold
+                                                    TextLabel.Parent = BillboardGui
+                                                    
+                                                    local UIStroke = Instance.new("UIStroke")
+                                                    UIStroke.Color = Color3.new(0, 0, 0)
+                                                    UIStroke.Thickness = 1.5
+                                                    UIStroke.Parent = TextLabel
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+local espKeys = TabHandles.TugWar:Toggle({
+    Title = "ESP Keys",
+    Desc = "Highlight dropped keys with yellow color",
+    Value = false,
+    Callback = function(Value) 
+        _G.EspKeys = Value
+        if not Value then
+            -- Clean up existing key ESP
+            pcall(function()
+                for _, a in pairs(workspace.Effects:GetChildren()) do
+                    if a.Name:find("DroppedKey") and a:FindFirstChild("Handle") then
+                        for _, child in pairs(a.Handle:GetChildren()) do
+                            if child.Name:find("Esp_") then
+                                child:Destroy()
+                            end
+                        end
+                    end
+                end
+            end)
+            return
+        end
+        
+        task.spawn(function()
+            while _G.EspKeys do
+                pcall(function()
+                    -- ESP for Keys
+                    for _, a in pairs(workspace.Effects:GetChildren()) do
+                        if a.Name:find("DroppedKey") and a:FindFirstChild("Handle") then
+                            if not a.Handle:FindFirstChild("Esp_Highlight") then
+                                local Highlight = Instance.new("Highlight")
+                                Highlight.Name = "Esp_Highlight"
+                                Highlight.FillColor = Color3.fromRGB(255, 255, 0)
+                                Highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+                                Highlight.FillTransparency = 0.3
+                                Highlight.OutlineTransparency = 0
+                                Highlight.Adornee = a
+                                Highlight.Parent = a.Handle
+                            end
+                            
+                            if not a.Handle:FindFirstChild("Esp_Gui") then
+                                local BillboardGui = Instance.new("BillboardGui")
+                                BillboardGui.Name = "Esp_Gui"
+                                BillboardGui.Size = UDim2.new(0, 150, 0, 40)
+                                BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
+                                BillboardGui.AlwaysOnTop = true
+                                BillboardGui.Parent = a.Handle
+                                
+                                local TextLabel = Instance.new("TextLabel")
+                                TextLabel.Size = UDim2.new(1, 0, 1, 0)
+                                TextLabel.BackgroundTransparency = 1
+                                TextLabel.Text = "KEY"
+                                TextLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+                                TextLabel.TextScaled = true
+                                TextLabel.Font = Enum.Font.SourceSansBold
+                                TextLabel.Parent = BillboardGui
+                                
+                                local UIStroke = Instance.new("UIStroke")
+                                UIStroke.Color = Color3.new(0, 0, 0)
+                                UIStroke.Thickness = 1.5
+                                UIStroke.Parent = TextLabel
+                            end
+                        end
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+local espHiders = TabHandles.TugWar:Toggle({
+    Title = "ESP Hiding Players",
+    Desc = "Highlight hiding players with red color",
+    Value = false,
+    Callback = function(Value) 
+        _G.EspHiders = Value
+        if not Value then
+            -- Clean up existing hider ESP
+            pcall(function()
+                for _, v in pairs(game.Players:GetPlayers()) do
+                    if v ~= player and v.Character and v.Character:FindFirstChild("Head") then
+                        for _, child in pairs(v.Character.Head:GetChildren()) do
+                            if child.Name:find("Esp_") then
+                                child:Destroy()
+                            end
+                        end
+                    end
+                end
+            end)
+            return
+        end
+        
+        task.spawn(function()
+            while _G.EspHiders do
+                pcall(function()
+                    -- ESP for Hiding Players
+                    for _, v in pairs(game.Players:GetPlayers()) do
+                        if v ~= player and v.Character and v.Character:FindFirstChild("Head") and v.Character:FindFirstChild("HumanoidRootPart") then
+                            if v:GetAttribute("IsHider") then
+                                if not v.Character.Head:FindFirstChild("Esp_Highlight") then
+                                    local Highlight = Instance.new("Highlight")
+                                    Highlight.Name = "Esp_Highlight"
+                                    Highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                                    Highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+                                    Highlight.FillTransparency = 0.5
+                                    Highlight.OutlineTransparency = 0
+                                    Highlight.Adornee = v.Character
+                                    Highlight.Parent = v.Character.Head
+                                end
+                                
+                                if not v.Character.Head:FindFirstChild("Esp_Gui") then
+                                    local BillboardGui = Instance.new("BillboardGui")
+                                    BillboardGui.Name = "Esp_Gui"
+                                    BillboardGui.Size = UDim2.new(0, 200, 0, 50)
+                                    BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
+                                    BillboardGui.AlwaysOnTop = true
+                                    BillboardGui.Parent = v.Character.Head
+                                    
+                                    local TextLabel = Instance.new("TextLabel")
+                                    TextLabel.Size = UDim2.new(1, 0, 1, 0)
+                                    TextLabel.BackgroundTransparency = 1
+                                    TextLabel.Text = v.Name .. " (HIDING)"
+                                    TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                                    TextLabel.TextScaled = true
+                                    TextLabel.Font = Enum.Font.SourceSansBold
+                                    TextLabel.Parent = BillboardGui
+                                    
+                                    local UIStroke = Instance.new("UIStroke")
+                                    UIStroke.Color = Color3.new(0, 0, 0)
+                                    UIStroke.Thickness = 1.5
+                                    UIStroke.Parent = TextLabel
+                                end
+                            else
+                                -- Clean ESP for non-hiders
+                                for _, child in pairs(v.Character.Head:GetChildren()) do
+                                    if child.Name:find("Esp_") then
+                                        child:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+local autoCollectKeys = TabHandles.TugWar:Toggle({
+    Title = "Auto Collect Keys",
+    Desc = "Automatically teleport to and collect dropped keys",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoCollectKeys = Value
+        task.spawn(function()
+            while _G.AutoCollectKeys do
+                pcall(function()
+                    if player:GetAttribute("IsHider") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local OldCFrame = player.Character.HumanoidRootPart.CFrame
+                        for _, a in pairs(workspace.Effects:GetChildren()) do
+                            if a.Name:find("DroppedKey") and a:FindFirstChild("Handle") then
+                                player.Character.HumanoidRootPart.CFrame = a.Handle.CFrame
+                                wait(0.5)
+                            end
+                        end
+                        player.Character.HumanoidRootPart.CFrame = OldCFrame
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+TabHandles.TugWar:Button({
+    Title = "Teleport to Random Hider",
+    Icon = "users",
+    Callback = function()
+        local hiders = {}
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v:GetAttribute("IsHider") then
+                table.insert(hiders, v)
             end
         end
-        while _G.DoorExit do
-            if workspace:FindFirstChild("HideAndSeekMap") then
-                for i, v in pairs(workspace:FindFirstChild("HideAndSeekMap"):GetChildren()) do
-                    if v.Name == "NEWFIXEDDOORS" then
-                        for k, m in pairs(v:GetChildren()) do
-                            if m.Name:find("Floor") and m:FindFirstChild("EXITDOORS") then
-                                for _, a in pairs(m:FindFirstChild("EXITDOORS"):GetChildren()) do
-                                    if a:IsA("Model") and a:FindFirstChild("DoorRoot") then
-                                        if a.DoorRoot:FindFirstChild("Esp_Highlight") then
-                                            a.DoorRoot:FindFirstChild("Esp_Highlight").FillColor = Color3.fromRGB(255, 255, 255)
-                                            a.DoorRoot:FindFirstChild("Esp_Highlight").OutlineColor = Color3.fromRGB(255, 255, 255)
-                                        end
-                                        if _G.EspHighlight == true and a.DoorRoot:FindFirstChild("Esp_Highlight") == nil then
-                                            local Highlight = Instance.new("Highlight")
-                                            Highlight.Name = "Esp_Highlight"
-                                            Highlight.FillColor = Color3.fromRGB(255, 255, 255) 
-                                            Highlight.OutlineColor = Color3.fromRGB(255, 255, 255) 
-                                            Highlight.FillTransparency = 0.5
-                                            Highlight.OutlineTransparency = 0
-                                            Highlight.Adornee = a
-                                            Highlight.Parent = a.DoorRoot
-                                        elseif _G.EspHighlight == false and a.DoorRoot:FindFirstChild("Esp_Highlight") then
-                                            a.DoorRoot:FindFirstChild("Esp_Highlight"):Destroy()
-                                        end
+        
+        if #hiders > 0 then
+            local randomHider = hiders[math.random(1, #hiders)]
+            player.Character.HumanoidRootPart.CFrame = randomHider.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+            Notification("Teleported to " .. randomHider.Name, 3)
+        else
+            Notification("No hiders found!", 3)
+        end
+    end
+})
+
+TabHandles.TugWar:Button({
+    Title = "Teleport to Nearest Exit Door",
+    Icon = "door-open",
+    Callback = function()
+        local nearestDoor = nil
+        local shortestDistance = math.huge
+        
+        if workspace:FindFirstChild("HideAndSeekMap") then
+            for _, v in pairs(workspace.HideAndSeekMap:GetChildren()) do
+                if v.Name == "NEWFIXEDDOORS" then
+                    for _, m in pairs(v:GetChildren()) do
+                        if m.Name:find("Floor") and m:FindFirstChild("EXITDOORS") then
+                            for _, a in pairs(m.EXITDOORS:GetChildren()) do
+                                if a:IsA("Model") and a:FindFirstChild("DoorRoot") and a.DoorRoot.PrimaryPart then
+                                    local distance = (player.Character.HumanoidRootPart.Position - a.DoorRoot.PrimaryPart.Position).Magnitude
+                                    if distance < shortestDistance then
+                                        shortestDistance = distance
+                                        nearestDoor = a.DoorRoot.PrimaryPart
                                     end
                                 end
                             end
@@ -487,8 +784,162 @@ local espDoorExit = TabHandles.TugWar:Toggle({
                     end
                 end
             end
-            task.wait()
         end
+        
+        if nearestDoor then
+            player.Character.HumanoidRootPart.CFrame = nearestDoor.CFrame * CFrame.new(0, 0, -5)
+            Notification("Teleported to nearest exit door!", 3)
+        else
+            Notification("No exit doors found!", 3)
+        end
+    end
+})
+
+-- Glass Bridge Tab
+TabHandles.GlassBridge:Paragraph({
+    Title = "Glass Bridge Challenge",
+    Desc = "Vision and auto-completion for glass bridge",
+    Image = "bridge",
+    ImageSize = 20,
+    Color = Color3.fromHex("#4ECDC4"),
+})
+
+local glassBridgeVision = TabHandles.GlassBridge:Toggle({
+    Title = "Glass Bridge Vision",
+    Desc = "Show safe vs fake glass panels",
+    Value = false,
+    Callback = function(Value) 
+        _G.GlassBridgeVision = Value
+        task.spawn(function()
+            while _G.GlassBridgeVision do
+                pcall(function()
+                    if workspace:FindFirstChild("GlassBridge") then
+                        local GlassHolder = workspace.GlassBridge:FindFirstChild("GlassHolder")
+                        if GlassHolder then
+                            for _, v in pairs(GlassHolder:GetChildren()) do
+                                for _, j in pairs(v:GetChildren()) do
+                                    if j:IsA("Model") and j.PrimaryPart then
+                                        local isSafe = not j.PrimaryPart:GetAttribute("exploitingisevil")
+                                        local Color = isSafe and Color3.fromRGB(28, 235, 87) or Color3.fromRGB(248, 87, 87)
+                                        j.PrimaryPart.Color = Color
+                                        j.PrimaryPart.Transparency = 0
+                                        j.PrimaryPart.Material = Enum.Material.Neon
+                                        
+                                        if not j.PrimaryPart:FindFirstChild("SafetyLabel") then
+                                            local BillboardGui = Instance.new("BillboardGui")
+                                            BillboardGui.Name = "SafetyLabel"
+                                            BillboardGui.Size = UDim2.new(0, 100, 0, 30)
+                                            BillboardGui.StudsOffset = Vector3.new(0, 2, 0)
+                                            BillboardGui.AlwaysOnTop = true
+                                            BillboardGui.Parent = j.PrimaryPart
+                                            
+                                            local TextLabel = Instance.new("TextLabel")
+                                            TextLabel.Size = UDim2.new(1, 0, 1, 0)
+                                            TextLabel.BackgroundTransparency = 1
+                                            TextLabel.Text = isSafe and "SAFE" or "FAKE"
+                                            TextLabel.TextColor3 = isSafe and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                                            TextLabel.TextScaled = true
+                                            TextLabel.Font = Enum.Font.SourceSansBold
+                                            TextLabel.Parent = BillboardGui
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(2)
+            end
+        end)
+    end
+})
+
+TabHandles.GlassBridge:Button({
+    Title = "Complete Glass Bridge",
+    Icon = "zap",
+    Callback = function()
+        pcall(function()
+            if workspace:FindFirstChild("GlassBridge") and workspace.GlassBridge:FindFirstChild("End") and workspace.GlassBridge.End.PrimaryPart then
+                local pos = workspace.GlassBridge.End.PrimaryPart.Position + Vector3.new(0, 8, 0)
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(pos, pos + Vector3.new(0, 0, -1))
+                Notification("Glass Bridge completed!", 3)
+            end
+        end)
+    end
+})
+
+local autoGlassBridge = TabHandles.GlassBridge:Toggle({
+    Title = "Auto Complete Glass Bridge",
+    Desc = "Automatically complete when detected",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoGlassBridge = Value
+        task.spawn(function()
+            while _G.AutoGlassBridge do
+                pcall(function()
+                    if workspace:FindFirstChild("GlassBridge") and workspace.GlassBridge:FindFirstChild("End") and workspace.GlassBridge.End.PrimaryPart then
+                        local pos = workspace.GlassBridge.End.PrimaryPart.Position + Vector3.new(0, 8, 0)
+                        if (player.Character.HumanoidRootPart.Position - pos).Magnitude > 50 then
+                            player.Character.HumanoidRootPart.CFrame = CFrame.new(pos, pos + Vector3.new(0, 0, -1))
+                            Notification("Glass Bridge completed!", 3)
+                        end
+                    end
+                end)
+                task.wait(3)
+            end
+        end)
+    end
+})
+
+-- Jump Rope Tab
+TabHandles.JumpRope:Paragraph({
+    Title = "Jump Rope Challenge",
+    Desc = "Auto-complete jump rope mini-games",
+    Image = "repeat",
+    ImageSize = 20,
+    Color = Color3.fromHex("#FF6B6B"),
+})
+
+TabHandles.JumpRope:Button({
+    Title = "Complete Jump Rope",
+    Icon = "zap",
+    Callback = function()
+        pcall(function()
+            if workspace:FindFirstChild("JumpRope") and workspace.JumpRope:FindFirstChild("Important") then
+                local model = workspace.JumpRope.Important:FindFirstChild("Model")
+                if model and model:FindFirstChild("LEGS") then
+                    local pos = model.LEGS.Position
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(pos, pos + Vector3.new(0, 0, -1))
+                    Notification("Jump Rope completed!", 3)
+                end
+            end
+        end)
+    end
+})
+
+local autoJumpRope = TabHandles.JumpRope:Toggle({
+    Title = "Auto Jump Rope",
+    Desc = "Automatically complete jump rope challenges",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoJumpRope = Value
+        task.spawn(function()
+            while _G.AutoJumpRope do
+                pcall(function()
+                    if workspace:FindFirstChild("JumpRope") and workspace.JumpRope:FindFirstChild("Important") then
+                        local model = workspace.JumpRope.Important:FindFirstChild("Model")
+                        if model and model:FindFirstChild("LEGS") then
+                            local pos = model.LEGS.Position
+                            if (player.Character.HumanoidRootPart.Position - pos).Magnitude > 20 then
+                                player.Character.HumanoidRootPart.CFrame = CFrame.new(pos, pos + Vector3.new(0, 0, -1))
+                                Notification("Jump Rope completed!", 3)
+                            end
+                        end
+                    end
+                end)
+                task.wait(3)
+            end
+        end)
     end
 })
 
@@ -534,60 +985,99 @@ local infJump = TabHandles.Player:Toggle({
     end
 })
 
-local flySpeedSlider = TabHandles.Player:Slider({
-    Title = "Fly Speed",
-    Desc = "Set your flying speed",
-    Value = { Min = 20, Max = 500, Default = 50 },
+local floatHeightSlider = TabHandles.Player:Slider({
+    Title = "Float Height",
+    Desc = "Set your floating height above ground",
+    Value = { Min = 5, Max = 100, Default = 20 },
     Callback = function(value)
-        _G.SetSpeedFly = value
+        _G.FloatHeight = value
     end
 })
 
-local flyToggle = TabHandles.Player:Toggle({
-    Title = "Fly",
-    Desc = "Enable flying",
+local floatToggle = TabHandles.Player:Toggle({
+    Title = "Float",
+    Desc = "Keep yourself floating at a set height",
     Value = false,
     Callback = function(Value) 
-        _G.StartFly = Value
-        while _G.StartFly do
-            if game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyGyro") == nil then
-                local bg = Instance.new("BodyGyro", game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
-                bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-                bg.P = 9e4
-                bg.CFrame = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart").CFrame
-            end
-            if game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") == nil then
-                local bv = Instance.new("BodyVelocity", game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
-                bv.Velocity = Vector3.new(0, 0, 0)
-                bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-            end
-            local MoveflyPE = require(game.Players.LocalPlayer.PlayerScripts:WaitForChild("PlayerModule"):WaitForChild("ControlModule")):GetMoveVector()
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") and game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyGyro") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.MaxForce = Vector3.new(9e9,9e9,9e9)
-                game.Players.LocalPlayer.Character.HumanoidRootPart.BodyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-                game.Players.LocalPlayer.Character.HumanoidRootPart.BodyGyro.CFrame = CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position, game.Players.LocalPlayer.Character.HumanoidRootPart.Position + game.Workspace.CurrentCamera.CFrame.LookVector)
-                game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity = Vector3.new()
-                if MoveflyPE.X > 0 then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity = game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity + game.Workspace.CurrentCamera.CFrame.RightVector * (MoveflyPE.X * _G.SetSpeedFly)
+        _G.StartFloat = Value
+        
+        if Value then
+            task.spawn(function()
+                while _G.StartFloat and game.Players.LocalPlayer.Character do
+                    local character = game.Players.LocalPlayer.Character
+                    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    
+                    if humanoidRootPart and humanoid then
+                        -- Create BodyPosition if it doesn't exist
+                        local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
+                        if not bodyPosition then
+                            bodyPosition = Instance.new("BodyPosition")
+                            bodyPosition.Name = "FloatBodyPosition"
+                            bodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
+                            bodyPosition.P = 10000
+                            bodyPosition.D = 1000
+                            bodyPosition.Parent = humanoidRootPart
+                        end
+                        
+                        -- Set the target position (current X and Z, but elevated Y)
+                        local currentPos = humanoidRootPart.Position
+                        local targetHeight = currentPos.Y
+                        
+                        -- Raycast downward to find ground
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterDescendantsInstances = {character}
+                        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                        
+                        local raycastResult = workspace:Raycast(currentPos, Vector3.new(0, -1000, 0), raycastParams)
+                        if raycastResult then
+                            targetHeight = raycastResult.Position.Y + (_G.FloatHeight or 20)
+                        end
+                        
+                        bodyPosition.Position = Vector3.new(currentPos.X, targetHeight, currentPos.Z)
+                        
+                        -- Disable fall damage
+                        humanoid.PlatformStand = true
+                    end
+                    
+                    task.wait(0.1)
                 end
-                if MoveflyPE.X < 0 then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity = game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity + game.Workspace.CurrentCamera.CFrame.RightVector * (MoveflyPE.X * _G.SetSpeedFly)
+                
+                -- Clean up when float is disabled
+                if game.Players.LocalPlayer.Character then
+                    local character = game.Players.LocalPlayer.Character
+                    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    
+                    if humanoidRootPart then
+                        local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
+                        if bodyPosition then
+                            bodyPosition:Destroy()
+                        end
+                    end
+                    
+                    if humanoid then
+                        humanoid.PlatformStand = false
+                    end
                 end
-                if MoveflyPE.Z > 0 then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity = game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity - game.Workspace.CurrentCamera.CFrame.LookVector * (MoveflyPE.Z * _G.SetSpeedFly)
+            end)
+        else
+            -- Clean up immediately when disabled
+            if game.Players.LocalPlayer.Character then
+                local character = game.Players.LocalPlayer.Character
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character:FindFirstChild("Humanoid")
+                
+                if humanoidRootPart then
+                    local bodyPosition = humanoidRootPart:FindFirstChild("FloatBodyPosition")
+                    if bodyPosition then
+                        bodyPosition:Destroy()
+                    end
                 end
-                if MoveflyPE.Z < 0 then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity = game.Players.LocalPlayer.Character.HumanoidRootPart.BodyVelocity.Velocity - game.Workspace.CurrentCamera.CFrame.LookVector * (MoveflyPE.Z * _G.SetSpeedFly)
+                
+                if humanoid then
+                    humanoid.PlatformStand = false
                 end
-            end
-            task.wait()
-        end
-        if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            if game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyGyro") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyGyro"):Destroy()
-            end
-            if game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart:FindFirstChild("BodyVelocity"):Destroy()
             end
         end
     end
@@ -632,6 +1122,7 @@ TabHandles.Visual:Paragraph({
 
 -- ESP Variables
 _G.EspHighlight = false
+_G.EspGui = false
 _G.ColorLight = Color3.fromRGB(255, 255, 255)
 local espObjects = {}
 
@@ -789,6 +1280,76 @@ game.Players.PlayerRemoving:Connect(function(player)
         end
     end
 end)
+
+TabHandles.Utils:Paragraph({
+    Title = "Utility Functions",
+    Desc = "Additional helpful features",
+    Image = "tool",
+    ImageSize = 20,
+    Color = Color3.fromHex("#4ECDC4"),
+})
+
+local antiFling = TabHandles.Utils:Toggle({
+    Title = "Anti-Fling",
+    Desc = "Prevent other players from flinging you",
+    Value = false,
+    Callback = function(Value) 
+        _G.AntiFling = Value
+        task.spawn(function()
+            while _G.AntiFling do
+                pcall(function()
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        player.Character.HumanoidRootPart.Anchored = true
+                        player.Character.HumanoidRootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                        player.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        player.Character.HumanoidRootPart.Anchored = false
+                    end
+                end)
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+local autoSkip = TabHandles.Utils:Toggle({
+    Title = "Auto Skip Dialogues",
+    Desc = "Automatically skip game dialogues",
+    Value = false,
+    Callback = function(Value) 
+        _G.AutoSkip = Value
+        task.spawn(function()
+            while _G.AutoSkip do
+                pcall(function()
+                    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("DialogueRemote"):FireServer("Skipped")
+                    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("TemporaryReachedBindable"):FireServer()
+                end)
+                task.wait(0.8)
+            end
+        end)
+    end
+})
+
+local noCooldownProximity = TabHandles.Utils:Toggle({
+    Title = "No Cooldown Proximity",
+    Desc = "Remove hold duration from proximity prompts",
+    Value = false,
+    Callback = function(Value) 
+        _G.NoCooldownProximity = Value
+        if Value then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v.ClassName == "ProximityPrompt" then
+                    v.HoldDuration = 0
+                end
+            end
+            
+            workspace.DescendantAdded:Connect(function(descendant)
+                if _G.NoCooldownProximity and descendant:IsA("ProximityPrompt") then
+                    descendant.HoldDuration = 0
+                end
+            end)
+        end
+    end
+})
 
 -- UI Settings Tab
 TabHandles.UISettings:Paragraph({

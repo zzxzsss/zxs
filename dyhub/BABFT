@@ -1,0 +1,257 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+-- สร้าง ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DYHUB"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- สร้าง Frame หลัก
+local mainFrame = Instance.new("Frame", screenGui)
+mainFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
+mainFrame.Size = UDim2.new(0, 220, 0, 120)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+
+local uiCorner = Instance.new("UICorner", mainFrame)
+uiCorner.CornerRadius = UDim.new(0, 12)
+
+local uiStroke = Instance.new("UIStroke", mainFrame)
+uiStroke.Color = Color3.fromRGB(255, 255, 255)
+uiStroke.Thickness = 1.5
+
+-- Title
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, -40, 0, 40)
+title.Position = UDim2.new(0, 40, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "DYHUB | BABFT"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local titleGradient = Instance.new("UIGradient", title)
+titleGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+}
+titleGradient.Rotation = 0
+task.spawn(function()
+    while task.wait(0.03) do
+        titleGradient.Rotation = (titleGradient.Rotation + 1) % 360
+    end
+end)
+
+-- Icon
+local icon = Instance.new("TextButton", mainFrame)
+icon.Size = UDim2.new(0, 40, 0, 40)
+icon.Position = UDim2.new(0, 0, 0, 0)
+icon.BackgroundTransparency = 1
+icon.Text = "🅳"
+icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+icon.Font = Enum.Font.GothamBold
+icon.TextSize = 20
+icon.TextStrokeTransparency = 0.7
+
+local iconGradient = Instance.new("UIGradient", icon)
+iconGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+}
+iconGradient.Rotation = 0
+task.spawn(function()
+    while task.wait(0.03) do
+        iconGradient.Rotation = (iconGradient.Rotation + 1) % 360
+    end
+end)
+
+-- TextLabel แสดงจำนวนทอง
+local goldStart = LocalPlayer:WaitForChild("Data"):WaitForChild("Gold").Value
+local goldDisplay = Instance.new("TextLabel", mainFrame)
+goldDisplay.Position = UDim2.new(0, 10, 0, 85)
+goldDisplay.Size = UDim2.new(0, 200, 0, 25)
+goldDisplay.BackgroundTransparency = 1
+goldDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+goldDisplay.Font = Enum.Font.Gotham
+goldDisplay.TextSize = 14
+goldDisplay.TextXAlignment = Enum.TextXAlignment.Center
+
+task.spawn(function()
+    while true do
+        local now = LocalPlayer.Data.Gold.Value
+        goldDisplay.Text = "💰 " .. now .. " | +" .. (now - goldStart)
+        task.wait(0.5)
+    end
+end)
+
+-- ฟังก์ชันวางแพลตฟอร์มและตำแหน่งเดิน
+local positions = {
+    Vector3.new(-62, 67, 1363),
+    Vector3.new(-65, 58, 2135),
+    Vector3.new(-52, 73, 2903),
+    Vector3.new(-58, 76, 3672),
+    Vector3.new(-60, 80, 4445),
+    Vector3.new(-55, 73, 5217),
+    Vector3.new(-53, 64, 5984),
+    Vector3.new(-63, 63, 6751),
+    Vector3.new(-50, 28, 7527),
+    Vector3.new(-104, 37, 8298),
+    Vector3.new(-57, -358, 9491)
+}
+
+local function platformExistsAt(pos)
+    for _, part in ipairs(workspace:GetChildren()) do
+        if part:IsA("Part") and part.Name == "TeleportPlatform" then
+            if (part.Position - Vector3.new(pos.X, pos.Y - 3, pos.Z)).Magnitude < 0.1 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function placePlatform(pos)
+    if platformExistsAt(pos) then return end
+
+    local platform = Instance.new("Part")
+    platform.Size = Vector3.new(10, 1, 10)
+    platform.Position = Vector3.new(pos.X, pos.Y - 3, pos.Z)
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Material = Enum.Material.SmoothPlastic
+    platform.BrickColor = BrickColor.new("Bright red")
+    platform.Name = "TeleportPlatform"
+    platform.Parent = workspace
+
+    local surfaceGui = Instance.new("SurfaceGui")
+    surfaceGui.Face = Enum.NormalId.Top
+    surfaceGui.Adornee = platform
+    surfaceGui.Parent = platform
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "DYHUB"  -- เปลี่ยนข้อความตรงนี้
+    textLabel.TextColor3 = Color3.fromRGB(0, 0, 0) -- สีแดงสด
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.SourceSansBold
+    textLabel.Parent = surfaceGui
+end
+
+-- ตัวแปรสถานะการทำงาน
+local isRunning = false
+
+-- ฟังก์ชันทำ AutoFarm loop
+local function runLoop()
+    while isRunning do
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = character:WaitForChild("HumanoidRootPart")
+
+        for _, pos in ipairs(positions) do
+            if not isRunning then break end
+            placePlatform(pos)
+            hrp.CFrame = CFrame.new(pos)
+            task.wait(1)
+        end
+
+        task.wait(16) -- cooldown
+    end
+end
+
+-- ปุ่ม START/STOP
+local startButton = Instance.new("TextButton", mainFrame)
+startButton.Position = UDim2.new(0, 10, 0, 50)
+startButton.Size = UDim2.new(0, 200, 0, 30)
+startButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40) -- สีเขียวเริ่มต้น
+startButton.Text = "Auto Farm [OFF]"
+startButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+startButton.TextScaled = true
+Instance.new("UICorner", startButton).CornerRadius = UDim.new(0, 8)
+
+startButton.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    if isRunning then
+        startButton.Text = "Auto Farm [ON]"
+        startButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        task.spawn(runLoop)
+    else
+        startButton.Text = "Auto Farm [OFF]"
+        startButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end
+end)
+
+-- toggle menu ซ่อน/แสดง
+local menuVisible = true
+local function toggleMenu()
+    if menuVisible then
+        for _, child in ipairs(mainFrame:GetChildren()) do
+            if child ~= icon and child ~= startButton and child:IsA("GuiObject") then
+                child.Visible = false
+                child.Active = false
+            end
+        end
+        local tween = TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+            Size = UDim2.new(0, 40, 0, 40)
+        })
+        tween:Play()
+        menuVisible = false
+    else
+        local tween = TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+            Size = UDim2.new(0, 220, 0, 120)
+        })
+        tween:Play()
+        tween.Completed:Wait()
+        for _, child in ipairs(mainFrame:GetChildren()) do
+            if child ~= icon and child ~= startButton and child:IsA("GuiObject") then
+                child.Visible = true
+                child.Active = true
+            end
+        end
+        menuVisible = true
+    end
+end
+
+icon.MouseButton1Click:Connect(toggleMenu)
+
+-- ระบบลาก GUI
+local dragging, dragInput, dragStart, startPos
+local function startDrag(input)
+    dragging = true
+    dragStart = input.Position
+    startPos = mainFrame.Position
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            dragging = false
+        end
+    end)
+end
+
+local function updateDrag(input)
+    if dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        startDrag(input)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput then
+        updateDrag(input)
+    end
+end)

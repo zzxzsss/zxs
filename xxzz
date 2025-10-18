@@ -1,1 +1,2 @@
-loadstring(game:HttpGet("https://cdn.authguard.org/virtual-file/e68b2db07d43433fa17074fc9007dafe"))()
+loadstring(game:HttpGet("https://cdn.authguard.org/virtual-file/8423d33395b74b0e9d99d8004e4ed01c"))()
+---new key styem

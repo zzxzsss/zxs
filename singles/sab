@@ -1,509 +1,289 @@
-  
--- Auto Buy Merchant for Steal a Brainrot
--- Uses Obsidian library for interface
+-- Ultra-Fast Auto Buy Script for Steal a Brainrot
+-- Maximum speed optimization with parallel processing
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-
-local player = Players.LocalPlayer
-
--- Webhook Configuration
-local WEBHOOK_URL = " "
-
--- Load Obsidian UI Library
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
 local Options = Library.Options
 local Toggles = Library.Toggles
 
-Library.ForceCheckbox = false
-Library.ShowToggleFrameInKeybinds = true
-
--- Brainrot data from the game
+-- Brainrot data with product IDs
 local MerchantData = {
-    Brainrots = {
-        {
-            Brainrot = "Cupcake Koala",
-            StockKey = "Cupcake Koala",
-            Template = "Normal",
-            ProductId = 3450973929,
-            Index = 1
-        },
-        {
-            Brainrot = "Doi Doi Do",
-            StockKey = "Doi Doi Do",
-            Template = "Normal",
-            ProductId = 3450973937,
-            Index = 2
-        },
-        {
-            Brainrot = "Clickerino Crabo",
-            StockKey = "Clickerino Crabo",
-            Template = "Normal",
-            ProductId = 3450973935,
-            Index = 3
-        },
-        {
-            Brainrot = "Stoppo Luminino",
-            StockKey = "Stoppo Luminino",
-            Template = "Normal",
-            ProductId = 3450973930,
-            Index = 4
-        },
-        {
-            Brainrot = "Money Money Man",
-            StockKey = "Money Money Man",
-            Template = "Normal",
-            ProductId = 3450973932,
-            Index = 5
-        },
-        {
-            Brainrot = "Noo La Polizia",
-            StockKey = "Noo La Polizia",
-            Template = "Normal",
-            ProductId = 3450973934,
-            Index = 6
-        },
-        {
-            Brainrot = "Pirulitoita Bicicleteira",
-            StockKey = "Pirulitoita Bicicleteira",
-            Template = "Normal",
-            ProductId = 3450973933,
-            Index = 7
-        },
-        {
-            Brainrot = "Los Puggies",
-            StockKey = "Los Puggies",
-            Template = "Normal",
-            ProductId = 3450973936,
-            Index = 8
-        },
-        {
-            Brainrot = "Los Spaghettis",
-            StockKey = "Los Spaghettis",
-            Template = "ToiletTemplate",
-            Index = 9
-        },
-        {
-            Brainrot = "Fragrama and Chocrama",
-            StockKey = "Fragrama and Chocrama",
-            Template = "ShakeTemplate",
-            Index = 10
-        }
-    }
+	Brainrots = {
+		{Brainrot = "Cupcake Koala", StockKey = "Cupcake Koala", Template = "Normal", ProductId = 3450973929},
+		{Brainrot = "Doi Doi Do", StockKey = "Doi Doi Do", Template = "Normal", ProductId = 3450973937},
+		{Brainrot = "Clickerino Crabo", StockKey = "Clickerino Crabo", Template = "Normal", ProductId = 3450973935},
+		{Brainrot = "Stoppo Luminino", StockKey = "Stoppo Luminino", Template = "Normal", ProductId = 3450973930},
+		{Brainrot = "Money Money Man", StockKey = "Money Money Man", Template = "Normal", ProductId = 3450973932},
+		{Brainrot = "Noo La Polizia", StockKey = "Noo La Polizia", Template = "Normal", ProductId = 3450973934},
+		{Brainrot = "Pirulitoita Bicicleteira", StockKey = "Pirulitoita Bicicleteira", Template = "Normal", ProductId = 3450973933},
+		{Brainrot = "Los Puggies", StockKey = "Los Puggies", Template = "Normal", ProductId = 3450973936},
+		{Brainrot = "Los Spaghettis", StockKey = "Los Spaghettis", Template = "ToiletTemplate"},
+		{Brainrot = "Fragrama and Chocrama", StockKey = "Fragrama and Chocrama", Template = "ShakeTemplate"}
+	}
 }
 
--- Variables
+-- Get Net module for remote calls
+local Net = require(ReplicatedStorage.Packages.Net)
+local MerchantBuyRemote = Net:RemoteFunction("MerchantService/Buy")
+
+-- Auto buy settings
 local autoBuyEnabled = false
 local selectedBrainrots = {}
-local buyDelay = 1
-local connections = {}
+local buyDelay = 0 -- No delay for maximum speed
+local useCash = true
+local useRobux = false
+local purchaseAttempts = 0
+local successfulPurchases = 0
 
--- Helper function to format stock attribute
-local function formatStockAttribute(name)
-    return "StockEvent_" .. string.gsub(name, "%s", '_')
+-- Function to format stock attribute key
+local function formatStockAttribute(brainrotName)
+	return "StockEvent_" .. string.gsub(brainrotName, "%s", "_")
 end
 
--- Helper function to get stock
-local function getStock(brainrot)
-    local stockKey = formatStockAttribute(brainrot.StockKey)
-    return ReplicatedStorage:GetAttribute(stockKey) or 0
+-- Function to get stock count
+local function getStock(brainrotName)
+	local stockKey = formatStockAttribute(brainrotName)
+	return ReplicatedStorage:GetAttribute(stockKey) or 0
 end
 
--- Webhook notification function
-local function sendWebhook(eventType, brainrotName, stockCount)
-    pcall(function()
-        local request = syn and syn.request or http and http.request or http_request or request or httprequest
-        if not request then return end
+-- Ultra-fast purchase function - NEVER STOPS, even when out of stock
+local function attemptPurchase(index, brainrotData)
+	purchaseAttempts = purchaseAttempts + 1
 
-        local embed = {}
-        
-        if eventType == "merchant_start" then
-            embed = {
-                ["title"] = "🛒 Merchant Session Started",
-                ["color"] = 65280, -- Green
-                ["fields"] = {
-                    {
-                        ["name"] = "Status",
-                        ["value"] = "```Merchant is now open```",
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = "Time",
-                        ["value"] = "```" .. os.date("%I:%M:%S %p") .. "```",
-                        ["inline"] = true
-                    }
-                },
-                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            }
-        elseif eventType == "merchant_end" then
-            embed = {
-                ["title"] = "🚪 Merchant Session Ended",
-                ["color"] = 16711680, -- Red
-                ["fields"] = {
-                    {
-                        ["name"] = "Status",
-                        ["value"] = "```Merchant has closed```",
-                        ["inline"] = false
-                    },
-                    {
-                        ["name"] = "Time",
-                        ["value"] = "```" .. os.date("%I:%M:%S %p") .. "```",
-                        ["inline"] = true
-                    }
-                },
-                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            }
-        elseif eventType == "purchase" then
-            embed = {
-                ["title"] = "💰 Purchase Made",
-                ["color"] = 16776960, -- Yellow/Gold
-                ["fields"] = {
-                    {
-                        ["name"] = "Item",
-                        ["value"] = "```" .. brainrotName .. "```",
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "Stock Remaining",
-                        ["value"] = "```" .. tostring(stockCount) .. "```",
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "Time",
-                        ["value"] = "```" .. os.date("%I:%M:%S %p") .. "```",
-                        ["inline"] = true
-                    }
-                },
-                ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            }
-        end
+	-- Try cash purchase if enabled (fastest method)
+	if useCash then
+		task.spawn(function()
+			pcall(function()
+				local result = MerchantBuyRemote:InvokeServer("2298b248-44dd-4a34-bbfe-e1174e8ae1b4", index)
+				if result then
+					successfulPurchases = successfulPurchases + 1
+				end
+			end)
+		end)
+	end
 
-        request({
-            Url = WEBHOOK_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = HttpService:JSONEncode({
-                ["embeds"] = {embed}
-            })
-        })
-    end)
+	-- Try Robux purchase if enabled (parallel with cash)
+	if useRobux and brainrotData.ProductId then
+		task.spawn(function()
+			pcall(function()
+				local ShopPurchaseRemote = Net:RemoteEvent("ShopService/Purchase")
+				ShopPurchaseRemote:FireServer(brainrotData.ProductId)
+			end)
+		end)
+	end
+
+	return true
 end
 
--- Function to buy brainrot
-local function buyBrainrot(brainrotIndex, brainrotName)
-    local success = false
+-- Ultra-fast auto buy loop using RenderStepped for maximum speed
+local autoBuyConnection
+local function startAutoBuy()
+	if autoBuyConnection then
+		autoBuyConnection:Disconnect()
+	end
 
-    pcall(function()
-        -- Check stock first
-        local stockKey = formatStockAttribute(brainrotName)
-        local stock = ReplicatedStorage:GetAttribute(stockKey) or 0
-        
-        if stock <= 0 then
-            print("No stock available for " .. brainrotName)
-            return
-        end
+	-- Use RenderStepped instead of Heartbeat for faster execution
+	autoBuyConnection = RunService.RenderStepped:Connect(function()
+		if not autoBuyEnabled then return end
 
-        -- Use the Net module like the game does
-        local Net = require(ReplicatedStorage.Packages.Net)
-        
-        -- Set focused state (like opening merchant UI)
-        local setFocusedRemote = Net:RemoteEvent("MerchantService/SetFocused")
-        setFocusedRemote:FireServer("2298b248-44dd-4a34-bbfe-e1174e8ae1b4", true)
-        
-        task.wait(0.1) -- Small delay to mimic real user behavior
-        
-        -- Attempt purchase
-        local buyRemote = Net:RemoteFunction("MerchantService/Buy")
-        local result = buyRemote:InvokeServer("2298b248-44dd-4a34-bbfe-e1174e8ae1b4", brainrotIndex)
-        
-        if result then
-            success = true
-            print("Successfully bought " .. brainrotName .. " at index " .. brainrotIndex)
-            
-            -- Send webhook notification for purchase
-            local newStock = ReplicatedStorage:GetAttribute(stockKey) or 0
-            sendWebhook("purchase", brainrotName, newStock)
-        else
-            print("Purchase failed for " .. brainrotName)
-        end
-        
-        -- Remove focus
-        setFocusedRemote:FireServer("2298b248-44dd-4a34-bbfe-e1174e8ae1b4", false)
-    end)
-
-    return success
+		-- INSANE SPAM MODE: 40 concurrent attempts per frame per brainrot
+		for i, brainrotData in ipairs(MerchantData.Brainrots) do
+			if selectedBrainrots[brainrotData.Brainrot] then
+				-- 40 simultaneous purchase attempts for INSANE speed
+				for _ = 1, 40 do
+					task.spawn(function()
+						attemptPurchase(i, brainrotData)
+					end)
+				end
+			end
+		end
+	end)
 end
 
--- Auto buy loop
-local function setupAutoBuy()
-    if connections.autoBuy then
-        connections.autoBuy:Disconnect()
-    end
-
-    if autoBuyEnabled then
-        connections.autoBuy = RunService.Heartbeat:Connect(function()
-            if not autoBuyEnabled then return end
-
-            for brainrotName, enabled in pairs(selectedBrainrots) do
-                if enabled then
-                    for _, brainrot in pairs(MerchantData.Brainrots) do
-                        if brainrot.Brainrot == brainrotName then
-                            local stock = getStock(brainrot)
-                            if stock > 0 then
-                                buyBrainrot(brainrot.Index, brainrot.Brainrot)
-                                task.wait(buyDelay)
-                            else
-                                print(brainrotName .. " is sold out")
-                            end
-                            break
-                        end
-                    end
-                end
-            end
-
-            task.wait(0.1)
-        end)
-    end
-end
-
--- Create UI Window
+-- Create UI
 local Window = Library:CreateWindow({
-    Title = "Steal a Brainrot | Merchant Auto Buy",
-    Footer = "by PerfectHub",
-    Icon = 95816097006870,
-    NotifySide = "Right",
-    ShowCustomCursor = true,
+	Title = "Steal a Brainrot - ULTRA FAST",
+	Footer = "Maximum Speed Purchase System",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
 })
 
--- Create Tabs
 local Tabs = {
-    AutoBuy = Window:AddTab("Auto Buy", "shopping-cart"),
-    StockInfo = Window:AddTab("Stock Info", "package"),
-    ManualBuy = Window:AddTab("Manual Buy", "hand"),
-    Settings = Window:AddTab("UI Settings", "settings"),
+	Main = Window:AddTab("Auto Buy", "zap"),
+	Settings = Window:AddTab("Settings", "settings"),
+	["UI Settings"] = Window:AddTab("UI Settings", "palette")
 }
 
--- Auto Buy Tab
-local AutoBuyBox = Tabs.AutoBuy:AddLeftGroupbox("Auto Buy Settings", "dollar-sign")
+-- Main tab - Auto Buy controls
+local MainGroup = Tabs.Main:AddLeftGroupbox("Auto Buy Controls", "zap")
 
-AutoBuyBox:AddToggle("AutoBuyEnabled", {
-    Text = "Enable Auto Buy",
-    Tooltip = "Automatically buy selected brainrots",
-    Default = false,
-    Callback = function(state)
-        autoBuyEnabled = state
-        setupAutoBuy()
-
-        if state then
-            Library:Notify({
-                Title = "Auto Buy Enabled",
-                Description = "Merchant auto buy is now active!",
-                Time = 3,
-            })
-        else
-            Library:Notify({
-                Title = "Auto Buy Disabled",
-                Description = "Merchant auto buy is now inactive!",
-                Time = 3,
-            })
-        end
-    end
+MainGroup:AddToggle("AutoBuyEnabled", {
+	Text = "Enable Ultra-Fast Auto Buy",
+	Default = false,
+	Tooltip = "Instantly purchase selected brainrots at maximum speed",
+	Callback = function(Value)
+		autoBuyEnabled = Value
+		if Value then
+			startAutoBuy()
+			Library:Notify({
+				Title = "Ultra-Fast Auto Buy",
+				Description = "Maximum speed enabled! No delays.",
+				Time = 2
+			})
+		else
+			if autoBuyConnection then
+				autoBuyConnection:Disconnect()
+			end
+			Library:Notify({
+				Title = "Auto Buy",
+				Description = "Auto buy disabled. Attempts: " .. purchaseAttempts .. " | Success: " .. successfulPurchases,
+				Time = 3
+			})
+		end
+	end
 })
 
-AutoBuyBox:AddSlider("BuyDelay", {
-    Text = "Buy Delay (seconds)",
-    Default = 1,
-    Min = 0.1,
-    Max = 5,
-    Rounding = 1,
-    Callback = function(value)
-        buyDelay = value
-    end
+MainGroup:AddDivider()
+
+MainGroup:AddToggle("UseCash", {
+	Text = "Use Cash (Fastest)",
+	Default = true,
+	Tooltip = "Primary purchase method - fastest",
+	Callback = function(Value)
+		useCash = Value
+	end
 })
 
-AutoBuyBox:AddDivider()
-AutoBuyBox:AddLabel("Select Brainrots to Auto Buy", true)
+MainGroup:AddToggle("UseRobux", {
+	Text = "Use Robux (Parallel)",
+	Default = false,
+	Tooltip = "Runs alongside cash purchases",
+	Risky = true,
+	Callback = function(Value)
+		useRobux = Value
+	end
+})
 
--- Brainrot Selection Tab
-local BrainrotBox = Tabs.AutoBuy:AddRightGroupbox("Brainrot Selection", "check-square")
+MainGroup:AddDivider()
 
-for _, brainrot in pairs(MerchantData.Brainrots) do
-    BrainrotBox:AddToggle("Brainrot_" .. brainrot.Brainrot, {
-        Text = brainrot.Brainrot,
-        Tooltip = brainrot.Template .. " template",
-        Default = false,
-        Callback = function(state)
-            selectedBrainrots[brainrot.Brainrot] = state
-        end
-    })
-end
-
--- Stock Info Tab
-local StockBox = Tabs.StockInfo:AddLeftGroupbox("Current Stock Levels", "package")
-
-local stockLabels = {}
-
-for _, brainrot in pairs(MerchantData.Brainrots) do
-    local labelIdx = "StockLabel_" .. brainrot.Brainrot
-    StockBox:AddLabel(labelIdx, {
-        Text = brainrot.Brainrot .. ": Loading...",
-        DoesWrap = true,
-    })
-
-    stockLabels[brainrot.Brainrot] = {
-        brainrot = brainrot,
-        labelIdx = labelIdx
-    }
-end
-
--- Update stock display
-task.spawn(function()
-    while true do
-        for _, data in pairs(stockLabels) do
-            local stock = getStock(data.brainrot)
-            local stockText = stock > 0 and tostring(stock) .. " available" or "SOLD OUT"
-
-            pcall(function()
-                Options[data.labelIdx]:SetText(data.brainrot.Brainrot .. ": " .. stockText)
-            end)
-        end
-        task.wait(1)
-    end
+MainGroup:AddButton("Reset Statistics", function()
+	purchaseAttempts = 0
+	successfulPurchases = 0
+	Library:Notify({
+		Title = "Stats Reset",
+		Description = "Purchase statistics cleared",
+		Time = 2
+	})
 end)
 
--- Manual Buy Tab
-local ManualBox = Tabs.ManualBuy:AddLeftGroupbox("Manual Purchase", "shopping-bag")
-ManualBox:AddLabel("Click buttons below to manually buy brainrots", true)
-ManualBox:AddDivider()
+-- Brainrot selection
+local BrainrotGroup = Tabs.Main:AddRightGroupbox("Select Brainrots", "list")
 
-for _, brainrot in pairs(MerchantData.Brainrots) do
-    ManualBox:AddButton({
-        Text = "Buy " .. brainrot.Brainrot,
-        Tooltip = "Click to purchase " .. brainrot.Brainrot,
-        Func = function()
-            local success = buyBrainrot(brainrot.Index, brainrot.Brainrot)
-            if success then
-                Library:Notify({
-                    Title = "Purchase Successful",
-                    Description = "Bought " .. brainrot.Brainrot,
-                    Time = 3,
-                })
-            else
-                Library:Notify({
-                    Title = "Purchase Failed",
-                    Description = "Could not buy " .. brainrot.Brainrot,
-                    Time = 3,
-                })
-            end
-        end
-    })
+BrainrotGroup:AddLabel("Choose which brainrots to auto-buy:", true)
+BrainrotGroup:AddDivider()
+
+for i, brainrotData in ipairs(MerchantData.Brainrots) do
+	local brainrotName = brainrotData.Brainrot
+
+	BrainrotGroup:AddToggle("Brainrot_" .. i, {
+		Text = brainrotName,
+		Default = false,
+		Callback = function(Value)
+			selectedBrainrots[brainrotName] = Value
+		end
+	})
 end
 
--- UI Settings
-local MenuGroup = Tabs.Settings:AddLeftGroupbox("Menu Settings", "settings")
+-- Settings tab
+local SettingsGroup = Tabs.Settings:AddLeftGroupbox("Speed Information", "zap")
 
-MenuGroup:AddToggle("KeybindMenuOpen", {
-    Default = Library.KeybindFrame.Visible,
-    Text = "Open Keybind Menu",
-    Callback = function(value)
-        Library.KeybindFrame.Visible = value
-    end,
-})
+SettingsGroup:AddLabel("⚡ INSANE SPEED MODE ⚡", true)
+SettingsGroup:AddDivider()
+SettingsGroup:AddLabel("• Zero delay between purchases\n• 40 parallel attempts per frame\n• RenderStepped for max speed\n• NEVER STOPS (even when out of stock)\n• WARNING: WILL cause lag", true)
+SettingsGroup:AddDivider()
+SettingsGroup:AddLabel("This is INSANELY FAST!\nUse at your own risk!", true)
+
+local StatsGroup = Tabs.Settings:AddRightGroupbox("Live Monitor", "activity")
+
+-- Update stock and stats display
+task.spawn(function()
+	while true do
+		task.wait(0.1) -- Update display every 0.5s
+
+		local stockText = "📊 Purchase Stats:\n"
+		stockText = stockText .. "Attempts: " .. purchaseAttempts .. "\n"
+		stockText = stockText .. "Success: " .. successfulPurchases .. "\n\n"
+		stockText = stockText .. "📦 Stock Levels:\n"
+
+		for i, brainrotData in ipairs(MerchantData.Brainrots) do
+			local stock = getStock(brainrotData.StockKey)
+			local status = stock > 0 and "✓" or "✗"
+			local color = stock > 0 and "🟢" or "🔴"
+			stockText = stockText .. color .. " " .. brainrotData.Brainrot .. ": " .. stock .. "\n"
+		end
+
+		if StatsGroup.Container:FindFirstChild("StockLabel") then
+			StatsGroup.Container.StockLabel:Remove()
+		end
+
+		StatsGroup:AddLabel(stockText, true, "StockLabel")
+
+		if Library.Unloaded then break end
+	end
+end)
+
+-- UI Settings
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench")
 
 MenuGroup:AddToggle("ShowCustomCursor", {
-    Text = "Custom Cursor",
-    Default = true,
-    Callback = function(Value)
-        Library.ShowCustomCursor = Value
-    end,
+	Text = "Custom Cursor",
+	Default = true,
+	Callback = function(Value)
+		Library.ShowCustomCursor = Value
+	end
 })
 
 MenuGroup:AddDivider()
-MenuGroup:AddLabel("Menu Keybind"):AddKeyPicker("MenuKeybind", { 
-    Default = "RightShift", 
-    NoUI = true, 
-    Text = "Menu keybind" 
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+	Default = "RightShift",
+	NoUI = true,
+	Text = "Menu keybind"
 })
 
-MenuGroup:AddButton({
-    Text = "Unload Script",
-    Func = function()
-        Library:Unload()
-    end
-})
+MenuGroup:AddButton("Unload", function()
+	if autoBuyConnection then
+		autoBuyConnection:Disconnect()
+	end
+	Library:Unload()
+end)
 
 Library.ToggleKeybind = Options.MenuKeybind
 
--- Setup managers
+-- Theme and Save managers
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
-
 SaveManager:IgnoreThemeSettings()
-SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
 
 ThemeManager:SetFolder("StealABrainrot")
-SaveManager:SetFolder("StealABrainrot/MerchantAutoBuy")
+SaveManager:SetFolder("StealABrainrot/AutoBuy")
 
-SaveManager:BuildConfigSection(Tabs.Settings)
-ThemeManager:ApplyToTab(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
 
--- Success notification
+SaveManager:LoadAutoloadConfig()
+
 Library:Notify({
-    Title = "Merchant Auto Buy",
-    Description = "Script loaded successfully!",
-    Time = 5,
+	Title = "⚡ ULTRA-FAST MODE LOADED ⚡",
+	Description = "Zero delays - Maximum speed enabled!",
+	Time = 3
 })
-
-print("Steal a Brainrot - Merchant Auto Buy loaded!")
-
--- Track merchant session state
-local merchantOpen = false
-local lastStockCheck = tick()
-
-task.spawn(function()
-    while true do
-        local currentlyHasStock = false
-        
-        -- Check if any brainrot has stock
-        for _, brainrot in pairs(MerchantData.Brainrots) do
-            if getStock(brainrot) > 0 then
-                currentlyHasStock = true
-                break
-            end
-        end
-        
-        -- Detect merchant opening
-        if currentlyHasStock and not merchantOpen then
-            merchantOpen = true
-            sendWebhook("merchant_start")
-        end
-        
-        -- Detect merchant closing (no stock for 5+ seconds)
-        if not currentlyHasStock and merchantOpen then
-            if tick() - lastStockCheck > 5 then
-                merchantOpen = false
-                sendWebhook("merchant_end")
-            end
-        else
-            lastStockCheck = tick()
-        end
-        
-        task.wait(2)
-    end
-end)
-
--- Cleanup on unload
-Library:OnUnload(function()
-    if connections.autoBuy then
-        connections.autoBuy:Disconnect()
-    end
-    print("Merchant Auto Buy unloaded!")
-end)

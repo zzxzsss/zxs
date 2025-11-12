@@ -98,7 +98,7 @@ local function startAutoBuy()
 		for i, brainrotData in ipairs(MerchantData.Brainrots) do
 			if selectedBrainrots[brainrotData.Brainrot] then
 				-- 40 simultaneous purchase attempts for INSANE speed
-				for _ = 1, 40 do
+				for _ = 1, 10 do
 					task.spawn(function()
 						attemptPurchase(i, brainrotData)
 					end)
@@ -208,7 +208,7 @@ local SettingsGroup = Tabs.Settings:AddLeftGroupbox("Speed Information", "zap")
 
 SettingsGroup:AddLabel("⚡ INSANE SPEED MODE ⚡", true)
 SettingsGroup:AddDivider()
-SettingsGroup:AddLabel("• Zero delay between purchases\n• 40 parallel attempts per frame\n• RenderStepped for max speed\n• NEVER STOPS (even when out of stock)\n• WARNING: WILL cause lag", true)
+SettingsGroup:AddLabel("• Zero delay between purchases\n• 10 parallel attempts per frame\n• RenderStepped for max speed\n• NEVER STOPS (even when out of stock)\n• WARNING: WILL cause lag", true)
 SettingsGroup:AddDivider()
 SettingsGroup:AddLabel("This is INSANELY FAST!\nUse at your own risk!", true)
 

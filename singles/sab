@@ -16,7 +16,7 @@ local Options = Library.Options
 local Toggles = Library.Toggles
 
 -- Webhook Configuration
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1437293954566721728/W4wJLlHDfa0fUGLwHYIxjfBJUfBVkTkM_u5ccNGBWbJUfE9X9ii6immKU-XhBclc47lQ"
+local WEBHOOK_URL = ""
 
 -- Brainrot data with product IDs
 local MerchantData = {

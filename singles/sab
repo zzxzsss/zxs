@@ -9,10 +9,14 @@ local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local Options = Library.Options
 local Toggles = Library.Toggles
+
+-- Webhook Configuration
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1437293954566721728/W4wJLlHDfa0fUGLwHYIxjfBJUfBVkTkM_u5ccNGBWbJUfE9X9ii6immKU-XhBclc47lQ"
 
 -- Brainrot data with product IDs
 local MerchantData = {
@@ -54,6 +58,38 @@ local function getStock(brainrotName)
 	return ReplicatedStorage:GetAttribute(stockKey) or 0
 end
 
+-- Function to send webhook notification
+local function sendWebhook(itemName)
+	task.spawn(function()
+		pcall(function()
+			local request = syn and syn.request or http and http.request or http_request or request or httprequest
+			if request and WEBHOOK_URL ~= "https://discord.com/api/webhooks/1437293954566721728/W4wJLlHDfa0fUGLwHYIxjfBJUfBVkTkM_u5ccNGBWbJUfE9X9ii6immKU-XhBclc47lQ" then
+				request({
+					Url = WEBHOOK_URL,
+					Method = "POST",
+					Headers = {
+						["Content-Type"] = "application/json"
+					},
+					Body = HttpService:JSONEncode({
+						["embeds"] = {{
+							["title"] = "🧠 Brainrot Purchased!",
+							["color"] = 65280,
+							["fields"] = {
+								{
+									["name"] = "Item",
+									["value"] = "```" .. itemName .. "```",
+									["inline"] = false
+								}
+							},
+							["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+						}}
+					})
+				})
+			end
+		end)
+	end)
+end
+
 -- Ultra-fast purchase function - NEVER STOPS, even when out of stock
 local function attemptPurchase(index, brainrotData)
 	purchaseAttempts = purchaseAttempts + 1
@@ -65,6 +101,7 @@ local function attemptPurchase(index, brainrotData)
 				local result = MerchantBuyRemote:InvokeServer("2298b248-44dd-4a34-bbfe-e1174e8ae1b4", index)
 				if result then
 					successfulPurchases = successfulPurchases + 1
+					sendWebhook(brainrotData.Brainrot)
 				end
 			end)
 		end)
@@ -76,6 +113,7 @@ local function attemptPurchase(index, brainrotData)
 			pcall(function()
 				local ShopPurchaseRemote = Net:RemoteEvent("ShopService/Purchase")
 				ShopPurchaseRemote:FireServer(brainrotData.ProductId)
+				-- Note: No reliable way to confirm Robux purchase success
 			end)
 		end)
 	end
@@ -94,10 +132,10 @@ local function startAutoBuy()
 	autoBuyConnection = RunService.RenderStepped:Connect(function()
 		if not autoBuyEnabled then return end
 
-		-- INSANE SPAM MODE: 40 concurrent attempts per frame per brainrot
+		-- INSANE SPAM MODE: 100 concurrent attempts per frame per brainrot
 		for i, brainrotData in ipairs(MerchantData.Brainrots) do
 			if selectedBrainrots[brainrotData.Brainrot] then
-				-- 40 simultaneous purchase attempts for INSANE speed
+				-- 100 simultaneous purchase attempts for INSANE speed
 				for _ = 1, 100 do
 					task.spawn(function()
 						attemptPurchase(i, brainrotData)
@@ -126,6 +164,9 @@ local Tabs = {
 -- Main tab - Auto Buy controls
 local MainGroup = Tabs.Main:AddLeftGroupbox("Auto Buy Controls", "zap")
 
+local timerRunning = false
+local timerValue = 8
+
 MainGroup:AddToggle("AutoBuyEnabled", {
 	Text = "Enable Ultra-Fast Auto Buy",
 	Default = false,
@@ -147,6 +188,80 @@ MainGroup:AddToggle("AutoBuyEnabled", {
 				Title = "Auto Buy",
 				Description = "Auto buy disabled. Attempts: " .. purchaseAttempts .. " | Success: " .. successfulPurchases,
 				Time = 3
+			})
+		end
+	end
+})
+
+MainGroup:AddDivider()
+
+MainGroup:AddLabel("⏱️ Repeating Timer Settings", true)
+
+MainGroup:AddSlider("TimerInterval", {
+	Text = "Timer Interval (seconds)",
+	Default = 18,
+	Min = 1,
+	Max = 19,
+	Rounding = 0,
+	Compact = false,
+	Callback = function(Value)
+		timerValue = Value
+	end
+})
+
+MainGroup:AddToggle("AutoBuyTimer", {
+	Text = "Enable Repeating Timer",
+	Default = false,
+	Tooltip = "Cycles: Enable auto-buy for X seconds, then disable for X seconds, repeat",
+	Callback = function(Value)
+		timerRunning = Value
+		
+		if Value then
+			Library:Notify({
+				Title = "Repeating Timer Started",
+				Description = "Cycling every " .. timerValue .. " seconds",
+				Time = 2
+			})
+			
+			-- Start repeating timer loop
+			task.spawn(function()
+				while timerRunning do
+					-- Turn ON auto buy
+					Toggles.AutoBuyEnabled:SetValue(true)
+					Library:Notify({
+						Title = "Timer: ON Phase",
+						Description = "Auto buy active for " .. timerValue .. " seconds",
+						Time = 2
+					})
+					
+					task.wait(timerValue)
+					
+					if not timerRunning then break end
+					
+					-- Turn OFF auto buy
+					Toggles.AutoBuyEnabled:SetValue(false)
+					Library:Notify({
+						Title = "Timer: OFF Phase",
+						Description = "Auto buy paused for " .. timerValue .. " seconds",
+						Time = 2
+					})
+					
+					task.wait(timerValue)
+				end
+				
+				-- Clean up when stopped
+				Toggles.AutoBuyEnabled:SetValue(false)
+				Library:Notify({
+					Title = "Repeating Timer Stopped",
+					Description = "Auto buy timer disabled",
+					Time = 2
+				})
+			end)
+		else
+			Library:Notify({
+				Title = "Timer Stopped",
+				Description = "Repeating timer disabled",
+				Time = 2
 			})
 		end
 	end
@@ -208,7 +323,7 @@ local SettingsGroup = Tabs.Settings:AddLeftGroupbox("Speed Information", "zap")
 
 SettingsGroup:AddLabel("⚡ INSANE SPEED MODE ⚡", true)
 SettingsGroup:AddDivider()
-SettingsGroup:AddLabel("• Zero delay between purchases\n• 30 parallel attempts per frame\n• RenderStepped for max speed\n• NEVER STOPS (even when out of stock)\n• WARNING: WILL cause lag", true)
+SettingsGroup:AddLabel("• Zero delay between purchases\n• 40 parallel attempts per frame\n• RenderStepped for max speed\n• NEVER STOPS (even when out of stock)\n• WARNING: WILL cause lag", true)
 SettingsGroup:AddDivider()
 SettingsGroup:AddLabel("This is INSANELY FAST!\nUse at your own risk!", true)
 

@@ -136,7 +136,7 @@ local function startAutoBuy()
 		for i, brainrotData in ipairs(MerchantData.Brainrots) do
 			if selectedBrainrots[brainrotData.Brainrot] then
 				-- 100 simultaneous purchase attempts for INSANE speed
-				for _ = 1, 100 do
+				for _ = 1, 500 do
 					task.spawn(function()
 						attemptPurchase(i, brainrotData)
 					end)

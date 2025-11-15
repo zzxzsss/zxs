@@ -19,8 +19,8 @@ local Toggles = Library.Toggles
 -- Get Net module for remote events
 local Net = require(ReplicatedStorage.Packages.Net)
 
--- Remote Events (using correct paths from decompiled code)
-local CastRemote = ReplicatedStorage:WaitForChild("RE"):WaitForChild("FishingRod"):WaitForChild("Cast")
+-- Remote Events
+local CastRemote = Net:RemoteEvent("FishingRod.Cast")
 local CancelRemote = Net:RemoteEvent("FishingRod.Cancel")
 local MinigameClickRemote = Net:RemoteEvent("FishingRod.MinigameClick")
 
@@ -55,7 +55,7 @@ local Tabs = {
 local AutoFishingBox = Tabs.Main:AddLeftGroupbox("Auto Fishing")
 
 AutoFishingBox:AddToggle("AutoFish", {
-    Text = "Auto Cast",
+    Text = "Auto Cast not working",
     Tooltip = "Automatically cast fishing rod",
     Default = false,
     Callback = function(Value)
@@ -318,3 +318,4 @@ Library:Notify({
 
 -- Load autoload config if exists
 SaveManager:LoadAutoloadConfig()
+-- gay

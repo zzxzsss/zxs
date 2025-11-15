@@ -1,3 +1,4 @@
+
 -- SAB Fishing Script with Linoria Library UI
 -- Auto-fishing with bite detection and catch automation
 
@@ -22,9 +23,6 @@ local Net = require(ReplicatedStorage.Packages.Net)
 local CastRemote = ReplicatedStorage:WaitForChild("RE"):WaitForChild("FishingRod"):WaitForChild("Cast")
 local CancelRemote = Net:RemoteEvent("FishingRod.Cancel")
 local MinigameClickRemote = Net:RemoteEvent("FishingRod.MinigameClick")
-
--- Webhook Configuration
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1419348595240603799/9VyQJVA1kfc9pgpHg4M5GqXfhNhQnvLEXaVvrbQuNtSLi1-Jl_tEPoZUoxwIcnSBfmtA"
 
 -- Settings
 _G.sabfishing = _G.sabfishing or {
@@ -62,7 +60,7 @@ AutoFishingBox:AddToggle("AutoFish", {
     Default = false,
     Callback = function(Value)
         _G.sabfishing.autoFish = Value
-
+        
         task.spawn(function()
             while _G.sabfishing.autoFish and task.wait(_G.sabfishing.castDelay) do
                 local character = LocalPlayer.Character
@@ -145,7 +143,7 @@ ConfigBox:AddButton({
                 return
             end
         end
-
+        
         Library:Notify({
             Title = "zzz hub",
             Description = "No fishing rod found in backpack",
@@ -183,48 +181,13 @@ InfoBox:AddLabel("2. Enable Auto Cast", true)
 InfoBox:AddLabel("3. Enable Auto Click for minigame", true)
 InfoBox:AddLabel("4. Adjust speeds as needed", true)
 
--- Function to send Brainrot catch webhook
-local function sendBrainrotWebhook(itemName)
-    local HttpService = game:GetService("HttpService")
-
-    pcall(function()
-        local request = syn and syn.request or http and http.request or http_request or request or httprequest
-        if request then
-            request({
-                Url = WEBHOOK_URL,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json"
-                },
-                Body = HttpService:JSONEncode({
-                    ["embeds"] = {{
-                        ["title"] = "🧠 Brainrot Caught!",
-                        ["color"] = 16711680,
-                        ["fields"] = {
-                            {
-                                ["name"] = "Item",
-                                ["value"] = "```" .. tostring(itemName) .. "```",
-                                ["inline"] = false
-                            }
-                        },
-                        ["footer"] = {
-                            ["text"] = "zzz hub - SAB Fishing"
-                        },
-                        ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-                    }}
-                })
-            })
-        end
-    end)
-end
-
 -- Minigame Auto Click System
 local function setupMinigameClicker()
     local connection
-
+    
     connection = RunService.Heartbeat:Connect(function()
         if not _G.sabfishing.autoClick then return end
-
+        
         local character = LocalPlayer.Character
         if character then
             local tool = character:FindFirstChildWhichIsA("Tool")
@@ -241,17 +204,17 @@ local function setupMinigameClicker()
             end
         end
     end)
-
+    
     return connection
 end
 
 -- Auto Cancel System (if enabled)
 local function setupAutoCancel()
     local connection
-
+    
     connection = RunService.Heartbeat:Connect(function()
         if not _G.sabfishing.autoCancel then return end
-
+        
         local character = LocalPlayer.Character
         if character then
             local tool = character:FindFirstChildWhichIsA("Tool")
@@ -276,7 +239,7 @@ local function setupAutoCancel()
             end
         end
     end)
-
+    
     return connection
 end
 
@@ -304,10 +267,10 @@ MenuGroup:AddToggle("ShowCustomCursor", {
 })
 
 MenuGroup:AddDivider()
-MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
-    Default = "RightShift",
-    NoUI = true,
-    Text = "Menu keybind"
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { 
+    Default = "RightShift", 
+    NoUI = true, 
+    Text = "Menu keybind" 
 })
 
 MenuGroup:AddButton({
@@ -355,31 +318,3 @@ Library:Notify({
 
 -- Load autoload config if exists
 SaveManager:LoadAutoloadConfig()
-
--- Detect when minigame ends (Brainrot caught)
-local lastMinigameState = false
-RunService.Heartbeat:Connect(function()
-    local character = LocalPlayer.Character
-    local isMinigame = false
-    if character then
-        local tool = character:FindFirstChildWhichIsA("Tool")
-        if tool and tool.Name:find("Rod") and tool:GetAttribute("minigame") then
-            isMinigame = true
-        end
-    end
-
-    if lastMinigameState and not isMinigame then
-        -- Check for caught Brainrot
-        task.wait(0.5)
-        local backpack = LocalPlayer.Backpack
-
-        -- Look for newly caught Brainrot in inventory
-        for _, item in pairs(backpack:GetChildren()) do
-            if item:IsA("Tool") and not item.Name:find("Rod") then
-                sendBrainrotWebhook(item.Name)
-                break
-            end
-        end
-    end
-    lastMinigameState = isMinigame
-end)

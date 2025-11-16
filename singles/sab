@@ -17,21 +17,180 @@ local Options = Library.Options
 local Toggles = Library.Toggles
 
 -- Get Net module for remote events
-local Net = require(ReplicatedStorage.Packages.Net)
+local Net = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"))
 
 -- Remote Events
 local CastRemote = Net:RemoteEvent("FishingRod.Cast")
 local CancelRemote = Net:RemoteEvent("FishingRod.Cancel")
 local MinigameClickRemote = Net:RemoteEvent("FishingRod.MinigameClick")
+local SellRemote = Net:RemoteEvent("PlotService/Sell")
+
+-- Brainrots to auto-sell
+local BrainrotsToSell = {
+    "Trippi Troppi",
+    "Trulimero Trulicina",
+    "Bananita Dolphinita",
+    "Blueberrinni Octopusini",
+    "Tralalero Tralala",
+    "Tralalita Tralala",
+    "Orcalero Orcala",
+    "Trippi Troppi Troppa Trippa",
+    "Los Orcalitos",
+    "Crabbo Limonetta",
+    "Orcalita Orcala",
+    "Squalanana",
+    "Belula Beluga",
+    "Tentacolo Tecnico",
+    "Extinct Tralalero",
+    "Zombie Tralala",
+    "Los Tralaleritos",
+    "Boatito Auratito",
+    "Las Tralaleritas",
+    "Graipuss Medussi",
+    "Tralaledon",
+    "Los Primos",
+    "Eviledon",
+    "Orcaledon",
+    "Capitano Moby"
+}
 
 -- Settings
 _G.sabfishing = _G.sabfishing or {
     autoFish = false,
     autoCatch = false,
     autoClick = false,
+    autoSell = false,
+    sellDelay = 5,
     clickSpeed = 0.1,
-    castDelay = 1
+    castDelay = 1,
+    castPower = 1.1  -- Sweet spot for perfect cast (~85%)
 }
+
+-- Function to find player's plot from workspace using CollectionService
+local CollectionService = game:GetService("CollectionService")
+
+local myPlotCache = nil
+
+local function getMyPlot()
+    -- Return cached plot if it exists and is still valid
+    if myPlotCache and myPlotCache.Parent then
+        return myPlotCache
+    end
+    
+    -- Get all objects with "Plot" tag
+    local plots = CollectionService:GetTagged("Plot")
+    
+    for _, plot in plots do
+        local owner = plot:GetAttribute("Owner")
+        local loaded = plot:GetAttribute("Loaded")
+        
+        -- Debug: Print plot info
+        print("[Plot Debug] Found plot - Owner:", owner, "Loaded:", loaded, "MyUserId:", LocalPlayer.UserId)
+        
+        -- Check if plot is loaded and owned by player
+        if loaded and owner == LocalPlayer.UserId then
+            myPlotCache = plot
+            print("[Plot Debug] Found MY plot!")
+            return plot
+        end
+    end
+    
+    -- If no tagged plots found, try workspace.Plots as backup
+    local plotsFolder = workspace:FindFirstChild("Plots")
+    if plotsFolder then
+        for _, plot in plotsFolder:GetChildren() do
+            local owner = plot:GetAttribute("Owner")
+            if owner == LocalPlayer.UserId then
+                print("[Plot Debug] Found plot in Plots folder!")
+                myPlotCache = plot
+                return plot
+            end
+        end
+    end
+    
+    print("[Plot Debug] No plot found!")
+    return nil
+end
+
+-- Wait for plot to load on startup
+task.spawn(function()
+    print("[Plot Debug] Waiting for plot to load...")
+    local attempts = 0
+    while not myPlotCache and attempts < 20 do
+        getMyPlot()
+        if not myPlotCache then
+            task.wait(0.5)
+            attempts = attempts + 1
+        end
+    end
+    if myPlotCache then
+        print("[Plot Debug] Plot loaded successfully!")
+    else
+        warn("[Plot Debug] Failed to find plot after 10 seconds")
+    end
+end)
+
+-- Function to get brainrot display name from slot
+local function getBrainrotAtSlot(slotNumber)
+    local plot = getMyPlot()
+    if not plot then return nil end
+    
+    -- Look for animal model on the plot
+    local animalPodiums = plot:FindFirstChild("AnimalPodiums")
+    if not animalPodiums then return nil end
+    
+    local podium = animalPodiums:FindFirstChild(tostring(slotNumber))
+    if not podium then return nil end
+    
+    -- Find the spawn position
+    local spawn = podium:FindFirstChild("Base") and podium.Base:FindFirstChild("Spawn")
+    if not spawn then return nil end
+    
+    -- Look for animal model near this spawn
+    for _, model in plot:GetChildren() do
+        if model:IsA("Model") and model.PrimaryPart then
+            local distance = (model.PrimaryPart.Position - spawn.Position).Magnitude
+            if distance < 5 then
+                -- Found a model at this slot, get its display name from overhead
+                for _, descendant in model:GetDescendants() do
+                    if descendant:IsA("BillboardGui") then
+                        local displayName = descendant:FindFirstChild("DisplayName", true)
+                        if displayName and displayName:IsA("TextLabel") then
+                            return displayName.Text
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    return nil
+end
+
+-- Function to sell selected brainrots
+local function sellSelectedBrainrots(selectedBrainrots)
+    if not getMyPlot() then 
+        return 0
+    end
+    
+    local soldCount = 0
+    
+    -- Check all 25 possible slots
+    for slot = 1, 25 do
+        local brainrotName = getBrainrotAtSlot(slot)
+        
+        if brainrotName and selectedBrainrots[brainrotName] then
+            -- This slot has a selected brainrot, sell it!
+            pcall(function()
+                SellRemote:FireServer(slot)
+                soldCount = soldCount + 1
+            end)
+            task.wait(0.1) -- Small delay between sells
+        end
+    end
+    
+    return soldCount
+end
 
 -- Create Window
 local Window = Library:CreateWindow({
@@ -47,6 +206,7 @@ local Window = Library:CreateWindow({
 -- Create Tabs
 local Tabs = {
     Main = Window:AddTab("Main", "fish"),
+    Beta = Window:AddTab("Beta/ not working and getting worked on", "flask-conical"),
     Settings = Window:AddTab("Settings", "settings"),
     ["UI Settings"] = Window:AddTab("UI Settings", "wrench")
 }
@@ -55,7 +215,7 @@ local Tabs = {
 local AutoFishingBox = Tabs.Main:AddLeftGroupbox("Auto Fishing")
 
 AutoFishingBox:AddToggle("AutoFish", {
-    Text = "Auto Cast not working",
+    Text = "Auto Cast",
     Tooltip = "Automatically cast fishing rod",
     Default = false,
     Callback = function(Value)
@@ -68,9 +228,12 @@ AutoFishingBox:AddToggle("AutoFish", {
                     local tool = character:FindFirstChildWhichIsA("Tool")
                     if tool and tool.Name:find("Rod") then
                         -- Check if not already casted
-                        if not tool:GetAttribute("casted") and not tool:GetAttribute("castCooldown") then
+                        if not tool:GetAttribute("casted") and not tool:GetAttribute("castCooldown") and not tool:GetAttribute("minigame") then
                             pcall(function()
-                                CastRemote:FireServer()
+                                -- Activate and hold for perfect cast (85% = ~1.1 seconds)
+                                tool:Activate()
+                                task.wait(_G.sabfishing.castPower)
+                                tool:Deactivate()
                             end)
                         end
                     end
@@ -102,6 +265,19 @@ AutoFishingBox:AddSlider("ClickSpeed", {
     end
 })
 
+AutoFishingBox:AddSlider("CastPower", {
+    Text = "Cast Power (Hold Time)",
+    Tooltip = "How long to hold cast for perfect power (1.5s = ~100% sweet spot)",
+    Default = 1.5,
+    Min = 0.5,
+    Max = 1.5,
+    Rounding = 2,
+    Compact = false,
+    Callback = function(Value)
+        _G.sabfishing.castPower = Value
+    end
+})
+
 AutoFishingBox:AddSlider("CastDelay", {
     Text = "Cast Delay",
     Tooltip = "Delay between casts in seconds",
@@ -121,6 +297,74 @@ AutoFishingBox:AddToggle("AutoCancel", {
     Default = false,
     Callback = function(Value)
         _G.sabfishing.autoCancel = Value
+    end
+})
+
+-- Beta Tab - Auto Sell Everything
+local BetaAutoSellBox = Tabs.Beta:AddLeftGroupbox("Auto Sell (Beta)")
+
+BetaAutoSellBox:AddLabel("WARNING: This will sell ALL", true)
+BetaAutoSellBox:AddLabel("brainrots on your plot!", true)
+BetaAutoSellBox:AddDivider()
+
+BetaAutoSellBox:AddToggle("AutoSellAll", {
+    Text = "Auto Sell Everything",
+    Tooltip = "Automatically sells all brainrots from all slots",
+    Default = false,
+    Callback = function(Value)
+        _G.sabfishing.autoSell = Value
+        
+        task.spawn(function()
+            while _G.sabfishing.autoSell and task.wait(_G.sabfishing.sellDelay) do
+                pcall(function()
+                    -- Sell all 25 slots
+                    for slot = 1, 25 do
+                        SellRemote:FireServer(slot)
+                        task.wait(0.05)
+                    end
+                    
+                    Library:Notify({
+                        Title = "zzz hub - Beta",
+                        Description = "Sold all slots!",
+                        Time = 2
+                    })
+                end)
+            end
+        end)
+    end
+})
+
+BetaAutoSellBox:AddSlider("SellDelay", {
+    Text = "Sell Delay",
+    Tooltip = "Delay between auto-sell cycles (seconds)",
+    Default = 5,
+    Min = 1,
+    Max = 30,
+    Rounding = 1,
+    Compact = false,
+    Callback = function(Value)
+        _G.sabfishing.sellDelay = Value
+    end
+})
+
+BetaAutoSellBox:AddButton({
+    Text = "Sell All Now",
+    Tooltip = "Immediately sell all brainrots (all 25 slots)",
+    Func = function()
+        pcall(function()
+            local sold = 0
+            for slot = 1, 25 do
+                SellRemote:FireServer(slot)
+                sold = sold + 1
+                task.wait(0.05)
+            end
+            
+            Library:Notify({
+                Title = "zzz hub - Beta",
+                Description = "Attempted to sell " .. sold .. " slots!",
+                Time = 3
+            })
+        end)
     end
 })
 
@@ -179,7 +423,8 @@ InfoBox:AddLabel("How to Use:", true)
 InfoBox:AddLabel("1. Equip your fishing rod", true)
 InfoBox:AddLabel("2. Enable Auto Cast", true)
 InfoBox:AddLabel("3. Enable Auto Click for minigame", true)
-InfoBox:AddLabel("4. Adjust speeds as needed", true)
+InfoBox:AddLabel("4. Enable Auto Sell for brainrots", true)
+InfoBox:AddLabel("5. Adjust speeds as needed", true)
 
 -- Minigame Auto Click System
 local function setupMinigameClicker()
@@ -293,6 +538,7 @@ Library:OnUnload(function()
     _G.sabfishing.autoFish = false
     _G.sabfishing.autoClick = false
     _G.sabfishing.autoCancel = false
+    _G.sabfishing.autoSell = false
     print("SAB Fishing script unloaded!")
 end)
 
@@ -318,4 +564,3 @@ Library:Notify({
 
 -- Load autoload config if exists
 SaveManager:LoadAutoloadConfig()
--- gay

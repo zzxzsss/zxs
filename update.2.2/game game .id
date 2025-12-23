@@ -1,3 +1,4 @@
+
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -34,9 +35,9 @@ ScreenGui.Parent = PlayerGui
 
 -- Detect mobile vs desktop
 local screenSize = ScreenGui.AbsoluteSize
-local isMobile = screenSize.X < 600
-local mainFrameSize = isMobile and UDim2.new(0, 300, 0, 450) or UDim2.new(0, 900, 0, 650)
-local mainFramePos = isMobile and UDim2.new(0.5, -150, 0.5, -225) or UDim2.new(0.5, -450, 0.5, -325)
+local isMobile = screenSize.X < 800 or screenSize.Y < 600
+local mainFrameSize = isMobile and UDim2.new(0.92, 0, 0.7, 0) or UDim2.new(0, 900, 0, 650)
+local mainFramePos = isMobile and UDim2.new(0.04, 0, 0.15, 0) or UDim2.new(0.5, -450, 0.5, -325)
 
 -- Main Container Frame
 local MainFrame = Instance.new("Frame")
@@ -56,10 +57,10 @@ MainStroke.Color = Color3.fromRGB(60, 60, 70)
 MainStroke.Thickness = 2
 MainStroke.Parent = MainFrame
 
--- Header
+-- Header - smaller on mobile
 local Header = Instance.new("Frame")
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 60)
+Header.Size = isMobile and UDim2.new(1, 0, 0, 45) or UDim2.new(1, 0, 0, 60)
 Header.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Header.BorderSizePixel = 0
 Header.Parent = MainFrame
@@ -99,12 +100,12 @@ HeaderCorner.Parent = Header
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Name = "Title"
-TitleLabel.Size = UDim2.new(0, 300, 1, 0)
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.Size = isMobile and UDim2.new(0.6, 0, 1, 0) or UDim2.new(0, 300, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = isMobile and "SAB Joiner" or "SAB Auto Joiner"
+TitleLabel.Text = isMobile and "SAB" or "SAB Auto Joiner"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 100, 150)
-TitleLabel.TextSize = isMobile and 16 or 20
+TitleLabel.TextSize = isMobile and 14 or 20
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
@@ -112,8 +113,8 @@ TitleLabel.Parent = Header
 -- Minimize Button
 local MinButton = Instance.new("ImageButton")
 MinButton.Name = "MinButton"
-MinButton.Size = UDim2.new(0, 25, 0, 25)
-MinButton.Position = UDim2.new(1, -65, 0, 17)
+MinButton.Size = isMobile and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 25, 0, 25)
+MinButton.Position = isMobile and UDim2.new(1, -55, 0.5, -11) or UDim2.new(1, -65, 0, 17)
 MinButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 MinButton.BorderSizePixel = 0
 MinButton.Image = "rbxassetid://10746932896"
@@ -124,16 +125,16 @@ local MinCorner = Instance.new("UICorner")
 MinCorner.CornerRadius = UDim.new(0, 5)
 MinCorner.Parent = MinButton
 
--- Restore Button (hidden by default)
+-- Restore Button (hidden by default) - positioned at top for mobile
 local RestoreButton = Instance.new("TextButton")
 RestoreButton.Name = "RestoreButton"
-RestoreButton.Size = UDim2.new(0, 120, 0, 50)
-RestoreButton.Position = UDim2.new(0.5, -60, 0.5, -25)
+RestoreButton.Size = isMobile and UDim2.new(0, 80, 0, 35) or UDim2.new(0, 120, 0, 50)
+RestoreButton.Position = isMobile and UDim2.new(0.5, -40, 0, 40) or UDim2.new(0.5, -60, 0.5, -25)
 RestoreButton.BackgroundColor3 = Color3.fromRGB(255, 100, 150)
 RestoreButton.BorderSizePixel = 0
-RestoreButton.Text = "SAB Open"
+RestoreButton.Text = "SAB"
 RestoreButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-RestoreButton.TextSize = 14
+RestoreButton.TextSize = isMobile and 12 or 14
 RestoreButton.Font = Enum.Font.GothamBold
 RestoreButton.Visible = false
 RestoreButton.Parent = ScreenGui
@@ -191,8 +192,8 @@ end)
 
 local CloseButton = Instance.new("ImageButton")
 CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 25, 0, 25)
-CloseButton.Position = UDim2.new(1, -35, 0, 17)
+CloseButton.Size = isMobile and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 25, 0, 25)
+CloseButton.Position = isMobile and UDim2.new(1, -28, 0.5, -11) or UDim2.new(1, -35, 0, 17)
 CloseButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 CloseButton.BorderSizePixel = 0
 CloseButton.Image = "rbxassetid://10747384394"
@@ -207,11 +208,11 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Settings Panel (Left Side)
+-- Settings Panel (Left Side) - smaller on mobile
 local SettingsPanel = Instance.new("Frame")
 SettingsPanel.Name = "SettingsPanel"
-SettingsPanel.Size = UDim2.new(0, 200, 1, -60)
-SettingsPanel.Position = UDim2.new(0, 0, 0, 60)
+SettingsPanel.Size = isMobile and UDim2.new(0.35, 0, 1, -45) or UDim2.new(0, 200, 1, -60)
+SettingsPanel.Position = isMobile and UDim2.new(0, 0, 0, 45) or UDim2.new(0, 0, 0, 60)
 SettingsPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
 SettingsPanel.BorderSizePixel = 0
 SettingsPanel.Parent = MainFrame
@@ -434,18 +435,105 @@ for mutation, price in pairs(config.prices) do
     PriceValueLabel.Parent = PriceFrame
 end
 
--- Servers List (Right Side)
+-- Servers List (Right Side on desktop, Below Settings on mobile)
 local ServersPanel = Instance.new("Frame")
 ServersPanel.Name = "ServersPanel"
-ServersPanel.Size = isMobile and UDim2.new(1, 0, 0, 280) or UDim2.new(1, -200, 1, -60)
-ServersPanel.Position = isMobile and UDim2.new(0, 0, 0, 220) or UDim2.new(0, 200, 0, 60)
+ServersPanel.Size = isMobile and UDim2.new(0.65, 0, 1, -45) or UDim2.new(1, -200, 1, -60)
+ServersPanel.Position = isMobile and UDim2.new(0.35, 0, 0, 45) or UDim2.new(0, 200, 0, 60)
 ServersPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 ServersPanel.BorderSizePixel = 0
 ServersPanel.Parent = MainFrame
 
+-- Filter Bar - smaller on mobile
+local FilterBar = Instance.new("Frame")
+FilterBar.Name = "FilterBar"
+FilterBar.Size = isMobile and UDim2.new(1, 0, 0, 35) or UDim2.new(1, 0, 0, 50)
+FilterBar.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+FilterBar.BorderSizePixel = 0
+FilterBar.Parent = ServersPanel
+
+local FilterBarCorner = Instance.new("UICorner")
+FilterBarCorner.CornerRadius = UDim.new(0, 8)
+FilterBarCorner.Parent = FilterBar
+
+local FilterBarPadding = Instance.new("UIPadding")
+FilterBarPadding.PaddingLeft = UDim.new(0, 8)
+FilterBarPadding.PaddingRight = UDim.new(0, 8)
+FilterBarPadding.PaddingTop = UDim.new(0, 5)
+FilterBarPadding.PaddingBottom = UDim.new(0, 5)
+FilterBarPadding.Parent = FilterBar
+
+-- Search Box - smaller on mobile
+local SearchBox = Instance.new("TextBox")
+SearchBox.Name = "SearchBox"
+SearchBox.Size = isMobile and UDim2.new(0.45, 0, 0, 22) or UDim2.new(0, 120, 0, 30)
+SearchBox.Position = isMobile and UDim2.new(0, 3, 0, 6) or UDim2.new(0, 5, 0, 10)
+SearchBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+SearchBox.BorderSizePixel = 0
+SearchBox.Text = ""
+SearchBox.PlaceholderText = isMobile and "Search..." or "Search pets..."
+SearchBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.TextSize = isMobile and 9 or 11
+SearchBox.Font = Enum.Font.Gotham
+SearchBox.Parent = FilterBar
+
+local SearchBoxCorner = Instance.new("UICorner")
+SearchBoxCorner.CornerRadius = UDim.new(0, 5)
+SearchBoxCorner.Parent = SearchBox
+
+-- Money Filter Dropdown - hidden on mobile for space
+local MoneyFilterLabel = Instance.new("TextLabel")
+MoneyFilterLabel.Size = isMobile and UDim2.new(0, 0, 0, 0) or UDim2.new(0, 50, 0, 30)
+MoneyFilterLabel.Position = isMobile and UDim2.new(0, 0, 0, 0) or UDim2.new(0, 130, 0, 10)
+MoneyFilterLabel.BackgroundTransparency = 1
+MoneyFilterLabel.Text = "💰 Filter:"
+MoneyFilterLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+MoneyFilterLabel.TextSize = 10
+MoneyFilterLabel.Font = Enum.Font.GothamBold
+MoneyFilterLabel.TextXAlignment = Enum.TextXAlignment.Center
+MoneyFilterLabel.Visible = not isMobile
+MoneyFilterLabel.Parent = FilterBar
+
+local MoneyFilterDropdown = Instance.new("TextButton")
+MoneyFilterDropdown.Name = "MoneyFilter"
+MoneyFilterDropdown.Size = isMobile and UDim2.new(0.45, 0, 0, 22) or UDim2.new(0, 70, 0, 30)
+MoneyFilterDropdown.Position = isMobile and UDim2.new(0.5, 0, 0, 6) or UDim2.new(0, 180, 0, 10)
+MoneyFilterDropdown.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+MoneyFilterDropdown.BorderSizePixel = 0
+MoneyFilterDropdown.Text = "All"
+MoneyFilterDropdown.TextColor3 = Color3.fromRGB(200, 200, 200)
+MoneyFilterDropdown.TextSize = isMobile and 9 or 11
+MoneyFilterDropdown.Font = Enum.Font.GothamBold
+MoneyFilterDropdown.Parent = FilterBar
+
+local MoneyFilterCorner = Instance.new("UICorner")
+MoneyFilterCorner.CornerRadius = UDim.new(0, 5)
+MoneyFilterCorner.Parent = MoneyFilterDropdown
+
+-- Filter config
+local filterConfig = {
+    moneyFilter = "All",
+    searchText = ""
+}
+
+-- Track filter changes
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    filterConfig.searchText = SearchBox.Text
+end)
+
+MoneyFilterDropdown.MouseButton1Click:Connect(function()
+    local options = {"All", "1M+", "5M+", "10M+"}
+    local currentIdx = table.find(options, MoneyFilterDropdown.Text) or 1
+    currentIdx = currentIdx % #options + 1
+    MoneyFilterDropdown.Text = options[currentIdx]
+    filterConfig.moneyFilter = options[currentIdx]
+end)
+
 local ScrollFrame = Instance.new("ScrollingFrame")
 ScrollFrame.Name = "ScrollFrame"
-ScrollFrame.Size = UDim2.new(1, 0, 1, 0)
+ScrollFrame.Size = UDim2.new(1, 0, 1, -50)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 50)
 ScrollFrame.CanvasSize = UDim2.new(1, 0, 0, 0)
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -472,13 +560,13 @@ end
 
 local function createServerButton(pet)
     local ServerButton = Instance.new("Frame")
-    ServerButton.Size = UDim2.new(1, 0, 0, 70)
+    ServerButton.Size = isMobile and UDim2.new(1, 0, 0, 55) or UDim2.new(1, 0, 0, 70)
     ServerButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     ServerButton.BorderSizePixel = 0
     ServerButton.Parent = ScrollFrame
 
     local ServerCorner = Instance.new("UICorner")
-    ServerCorner.CornerRadius = UDim.new(0, 8)
+    ServerCorner.CornerRadius = UDim.new(0, 6)
     ServerCorner.Parent = ServerButton
 
     local ServerStroke = Instance.new("UIStroke")
@@ -486,54 +574,58 @@ local function createServerButton(pet)
     ServerStroke.Thickness = 1
     ServerStroke.Parent = ServerButton
 
-    -- Server Info
+    -- Server Info - compact on mobile
     local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(0.6, 0, 0, 25)
-    NameLabel.Position = UDim2.new(0, 10, 0, 8)
+    NameLabel.Size = isMobile and UDim2.new(0.55, 0, 0, 18) or UDim2.new(0.6, 0, 0, 25)
+    NameLabel.Position = UDim2.new(0, 6, 0, 4)
     NameLabel.BackgroundTransparency = 1
-    NameLabel.Text = pet.name or "Unknown"
+    local displayName = pet.name or "Unknown"
+    if isMobile and #displayName > 12 then
+        displayName = displayName:sub(1, 10) .. ".."
+    end
+    NameLabel.Text = displayName
     NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    NameLabel.TextSize = 13
+    NameLabel.TextSize = isMobile and 10 or 13
     NameLabel.Font = Enum.Font.GothamBold
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
     NameLabel.Parent = ServerButton
 
     local current, max = parsePlayerCount(pet.players)
     local PlayerLabel = Instance.new("TextLabel")
-    PlayerLabel.Size = UDim2.new(0.3, 0, 0, 20)
-    PlayerLabel.Position = UDim2.new(0.65, 0, 0, 10)
+    PlayerLabel.Size = isMobile and UDim2.new(0.4, 0, 0, 14) or UDim2.new(0.3, 0, 0, 20)
+    PlayerLabel.Position = isMobile and UDim2.new(0.55, 0, 0, 5) or UDim2.new(0.65, 0, 0, 10)
     PlayerLabel.BackgroundTransparency = 1
-    PlayerLabel.Text = string.format("Players: %d/%d", current, max)
+    PlayerLabel.Text = isMobile and string.format("%d/%d", current, max) or string.format("Players: %d/%d", current, max)
     PlayerLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    PlayerLabel.TextSize = 11
+    PlayerLabel.TextSize = isMobile and 8 or 11
     PlayerLabel.Font = Enum.Font.Gotham
     PlayerLabel.TextXAlignment = Enum.TextXAlignment.Left
     PlayerLabel.Parent = ServerButton
 
-    -- Money Per Sec Label
+    -- Money Per Sec Label - simplified on mobile
     local moneyPerSec = tonumber(pet.money_per_sec) or 0
     local MoneyLabel = Instance.new("TextLabel")
-    MoneyLabel.Size = UDim2.new(0.3, 0, 0, 20)
-    MoneyLabel.Position = UDim2.new(0.65, 0, 0, 30)
+    MoneyLabel.Size = isMobile and UDim2.new(0.4, 0, 0, 14) or UDim2.new(0.3, 0, 0, 20)
+    MoneyLabel.Position = isMobile and UDim2.new(0.55, 0, 0, 18) or UDim2.new(0.65, 0, 0, 30)
     MoneyLabel.BackgroundTransparency = 1
-    MoneyLabel.Text = string.format("💰 %s/sec", pet.money_per_sec or "0")
+    MoneyLabel.Text = isMobile and string.format("$%s/s", pet.money_per_sec or "0") or string.format("💰 %s/sec", pet.money_per_sec or "0")
     MoneyLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    MoneyLabel.TextSize = 11
+    MoneyLabel.TextSize = isMobile and 8 or 11
     MoneyLabel.Font = Enum.Font.Gotham
     MoneyLabel.TextXAlignment = Enum.TextXAlignment.Left
     MoneyLabel.Parent = ServerButton
 
-    -- Mutation & Price Badge
+    -- Mutation & Price Badge - compact on mobile
     local price = config.prices[pet.mutation or "Normal"] or 0
     local MutationBadge = Instance.new("Frame")
-    MutationBadge.Size = UDim2.new(0, 150, 0, 24)
-    MutationBadge.Position = UDim2.new(0, 10, 0, 35)
+    MutationBadge.Size = isMobile and UDim2.new(0.6, 0, 0, 18) or UDim2.new(0, 150, 0, 24)
+    MutationBadge.Position = isMobile and UDim2.new(0, 6, 0, 24) or UDim2.new(0, 10, 0, 35)
     MutationBadge.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     MutationBadge.BorderSizePixel = 0
     MutationBadge.Parent = ServerButton
 
     local BadgeCorner = Instance.new("UICorner")
-    BadgeCorner.CornerRadius = UDim.new(0, 6)
+    BadgeCorner.CornerRadius = UDim.new(0, 4)
     BadgeCorner.Parent = MutationBadge
 
     local MutationLabel = Instance.new("TextLabel")
@@ -541,7 +633,7 @@ local function createServerButton(pet)
     MutationLabel.BackgroundTransparency = 1
     MutationLabel.Text = pet.mutation or "Normal"
     MutationLabel.TextColor3 = Color3.fromRGB(100, 200, 150)
-    MutationLabel.TextSize = 11
+    MutationLabel.TextSize = isMobile and 8 or 11
     MutationLabel.Font = Enum.Font.GothamBold
     MutationLabel.TextXAlignment = Enum.TextXAlignment.Center
     MutationLabel.Parent = MutationBadge
@@ -550,22 +642,22 @@ local function createServerButton(pet)
     PriceLabel.Size = UDim2.new(0.5, 0, 1, 0)
     PriceLabel.Position = UDim2.new(0.5, 0, 0, 0)
     PriceLabel.BackgroundTransparency = 1
-    PriceLabel.Text = string.format("💵 %d", price)
+    PriceLabel.Text = string.format("$%d", price)
     PriceLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    PriceLabel.TextSize = 11
+    PriceLabel.TextSize = isMobile and 8 or 11
     PriceLabel.Font = Enum.Font.GothamBold
     PriceLabel.TextXAlignment = Enum.TextXAlignment.Center
     PriceLabel.Parent = MutationBadge
 
-    -- Join Button
+    -- Join Button - smaller on mobile
     local JoinButton = Instance.new("TextButton")
-    JoinButton.Size = UDim2.new(0, 80, 0, 30)
-    JoinButton.Position = UDim2.new(1, -90, 0, 20)
+    JoinButton.Size = isMobile and UDim2.new(0, 45, 0, 22) or UDim2.new(0, 80, 0, 30)
+    JoinButton.Position = isMobile and UDim2.new(1, -50, 0.5, -11) or UDim2.new(1, -90, 0, 20)
     JoinButton.BackgroundColor3 = Color3.fromRGB(100, 150, 200)
     JoinButton.BorderSizePixel = 0
-    JoinButton.Text = "JOIN"
+    JoinButton.Text = isMobile and "GO" or "JOIN"
     JoinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    JoinButton.TextSize = 12
+    JoinButton.TextSize = isMobile and 9 or 12
     JoinButton.Font = Enum.Font.GothamBold
     JoinButton.Parent = ServerButton
 
@@ -675,15 +767,37 @@ local function refreshServers()
     end
 
     local serverCount = 0
-    -- Display servers
+    -- Display servers with filters applied
     for _, pet in ipairs(servers) do
         -- Add brainrot to selection if new
         if pet.name then
             addBrainrotCheckbox(pet.name)
         end
         
+        local passesFilter = true
+        
+        -- Apply money filter
+        if filterConfig.moneyFilter ~= "All" then
+            local moneyValue = tonumber(pet.money_per_sec) or 0
+            if filterConfig.moneyFilter == "1M+" and moneyValue < 1000000 then
+                passesFilter = false
+            elseif filterConfig.moneyFilter == "5M+" and moneyValue < 5000000 then
+                passesFilter = false
+            elseif filterConfig.moneyFilter == "10M+" and moneyValue < 10000000 then
+                passesFilter = false
+            end
+        end
+        
+        -- Apply search filter
+        if filterConfig.searchText ~= "" then
+            local petName = string.lower(pet.name or "Unknown")
+            if not string.find(petName, string.lower(filterConfig.searchText)) then
+                passesFilter = false
+            end
+        end
+        
         local brainrotSelected = (pet.name and config.brainrotSelection[pet.name]) or false
-        if config.mutationFilters[pet.mutation or "Normal"] and brainrotSelected then
+        if config.mutationFilters[pet.mutation or "Normal"] and brainrotSelected and passesFilter then
             local current, max = parsePlayerCount(pet.players)
             if current <= config.maxPlayersThreshold and not config.joinedServers[pet.jobId] then
                 createServerButton(pet)

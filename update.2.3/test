@@ -3,108 +3,107 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LogService = game:GetService("LogService")
 local HttpService = game:GetService("HttpService")
+local Stats = game:GetService("Stats")
+
+
 function AntiSpy:Start()
     local Player = Players.LocalPlayer
     local detectionCount = 0
     
-    local function integrityCheck()
+    -- 1. Virtual Machine Detection (Check for emulated/exploit environments)
+    local function vmCheck()
         pcall(function()
-            if debug.info(AntiSpy.Start, "s"):find("temp") then
-                Player:Kick("Integrity Error: Script location tampered")
+            -- Exploit-specific constants and behaviors
+            if getfenv(0) ~= getfenv(1) then
+                Player:Kick("Environment Integrity Violation [E-01]")
+            end
+            
+            -- Detect non-standard environment signatures
+            local env = getgenv and getgenv() or _G
+            if env.identifyexecutor or env.getexecutorname or env.checkclosure then
+                detectionCount = detectionCount + 1
             end
         end)
     end
 
-    local function securityCheck()
-        local detected = false
-        local reason = ""
-
+    -- 2. Performance-Based Hook Detection (Timing Attacks)
+    local function performanceCheck()
+        local t1 = Stats.Network.DataThroughputOut
+        local startTime = tick()
         
-        pcall(function()
-            local startTime = tick()
-            local testUrl = "http://localhost:9999/integrity_check_" .. math.random(1000, 9999)
-          
-            local _ = HttpService:GetAsync(testUrl)
-            
-            if (tick() - startTime) > 5 then
-                detected = true
-                reason = "Network latency spike (likely interceptor)"
-            end
-        end)
-
-        pcall(function()
-            local genv = getgenv and getgenv() or _G
-            for i, v in pairs(genv) do
-                if type(i) == "string" then
-                    local lowerI = i:lower()
-                    if lowerI:find("spy") or lowerI:find("log") or lowerI:find("hook") then
-                        if type(v) == "function" or type(v) == "table" then
-                            detected = true
-                            reason = "Suspicious global: " .. i
-                        end
-                    end
-                end
-            end
-        end)
-        pcall(function()
-            local logs = LogService:GetLogHistory()
-            local badPatterns = {
-                "SimpleSpy", "HttpSpy", "Hydroxide", "RemoteSpy",
-                "upvalue", "closure", "metatable", "hook"
-            }
-            for _, entry in ipairs(logs) do
-                for _, pattern in ipairs(badPatterns) do
-                    if entry.message:find(pattern) then
-                        detected = true
-                        reason = "Forbidden pattern in logs: " .. pattern
-                    end
-                end
-            end
-        end)
-        pcall(function()
-            if getrawmetatable then
-                local gm = getrawmetatable(game)
-                local namecall = gm.__namecall
-                local index = gm.__index
-                
-                -- Verify functions are original C-closures if possible
-                if namecall and not islclosure(namecall) and debug.info(namecall, "s") ~= "[C]" then
-                   detected = true
-                   reason = "Game metatable hook detected"
-                end
-            end
-        end)
-
-        if detected then
+        -- Trigger a heavy but normal operation
+        for i = 1, 1000 do
+            local _ = math.sin(i) * math.cos(i)
+        end
+        
+        local endTime = tick()
+        if (endTime - startTime) > 0.05 then -- Abnormally slow math (engine hook?)
             detectionCount = detectionCount + 1
-            if detectionCount >= 1 then
-                local crashReason = "\10\10\32\83\101\99\117\114\105\116\121\32\66\114\101\97\99\104\32\68\101\116\101\99\116\101\100\32\91\69\82\82\45\53\48\50\93\10\10"
-                Player:Kick(crashReason)
-                
-                -- Destructive cleanup
-                task.spawn(function()
-                    while true do
-                        pcall(function()
-                           for i=1, 1000 do
-                               local _ = Instance.new("Part", workspace)
-                           end
-                        end)
-                        task.wait()
-                    end
-                end)
-            end
         end
     end
 
-  
+    -- 3. Advanced Metatable & Hook Verification
+    local function deepHookCheck()
+        pcall(function()
+            if getrawmetatable then
+                local mt = getrawmetatable(game)
+                local nc = mt.__namecall
+                
+                -- Check if namecall is hooked using multiple methods
+                if debug.info(nc, "s") ~= "[C]" or islclosure(nc) or debug.info(nc, "n") ~= "__namecall" then
+                    Player:Kick("Metatable Protection Triggered [M-04]")
+                end
+                
+                -- Detect metatable manipulation via proxy
+                local success, _ = pcall(setrawmetatable, game, mt)
+                if success then -- Modern executors prevent this, so success might mean a fake environment
+                    detectionCount = detectionCount + 1
+                end
+            end
+        end)
+    end
+
+    -- 4. Stealth Network Monitor (Honey-potting 2.0)
+    local function networkHoneyPot()
+        pcall(function()
+            -- Request to a known "black-hole" local address
+            -- Spies will often try to "fix" or "log" these errors differently
+            local s, e = pcall(function()
+                return HttpService:GetAsync("http://127.0.0.1:0/security_integrity")
+            end)
+            
+            if not e:find("ConnectFail") and not e:find("Invalid") then
+                -- If the error is anything else, something is intercepting the failure
+                detectionCount = detectionCount + 1
+            end
+        end)
+    end
+
+    -- Watchdog with Escalating Protection
     task.spawn(function()
         while true do
-            integrityCheck()
-            securityCheck()
-            task.wait(math.random(1, 3))
+            vmCheck()
+            performanceCheck()
+            deepHookCheck()
+            networkHoneyPot()
+            
+            if detectionCount > 0 then
+                local reason = "\n\n\32\83\121\115\116\101\109\32\73\110\116\101\103\114\105\116\121\32\67\104\101\99\107\32\70\97\105\108\101\104\10\10"
+                Player:Kick(reason)
+                
+                -- Memory corruption simulation
+                while true do
+                    task.spawn(function()
+                        local b = {}
+                        for i=1, 100000 do b[i] = i end
+                    end)
+                    task.wait()
+                end
+            end
+            
+            task.wait(math.random(1, 2))
         end
     end)
 end
 
 return AntiSpy
-
